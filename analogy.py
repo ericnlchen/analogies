@@ -1,4 +1,6 @@
 import cv2
+import numpy as np
+import colorsys
 
 def createImageAnalogy(A, A_prime, B):
     '''
@@ -14,7 +16,7 @@ def createImageAnalogy(A, A_prime, B):
     pyramid_B = createGaussianPyramid(B, num_levels)
 
     # Get features for each level of Gaussian pyramids
-    #   ex. features_A is a pyramid of images with R, G, B, and feature channels
+    #   ex. A becomes a pyramid of images with R, G, B, and feature channels
     A = computeFeatures(pyramid_A)
     A_prime = computeFeatures(pyramid_A_prime)
     B = computeFeatures(pyramid_B)
@@ -27,7 +29,7 @@ def createImageAnalogy(A, A_prime, B):
     s = np.zeros(A_prime.shape)
 
     # NOTE: After this point, an image (A, B, etc) can be indexed as follows:
-    #   A[l, p_row, p_col, c] where:
+    #   A[l][p_row, p_col, c] where:
     #       - l is the level of the gaussian pyramid
     #       - p_row is the pixel's row
     #       - p_col is the pixel's column
@@ -44,10 +46,10 @@ def createImageAnalogy(A, A_prime, B):
                 p = bestMatch(A, A_prime, B, B_prime, s, l, q)
 
                 # Set the pixel in B' equal to the match we found
-                B_prime[l, q] = A_prime[l, p]
+                B_prime[l][q] = A_prime[l][p]
 
                 # Keep track of the mapping between p and q
-                s[l, q] = p
+                s[l][q] = p
 
     return B_prime[num_levels-1]
 
@@ -73,7 +75,66 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
 
 # Algorithm: using approximate nearest neighbor search
 def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
-    return None
+    '''
+    l is for level l
+    q is the point inside image B
+    '''
+    # skeloton code for bestApproximateMatch
+    t = AnnoyIndex(feature_length, 'euclidean')
+
+    
+    for i, feature in enumerate(extract_features(A)):
+        t.add_item(i, feature)
+
+    t.build(num_trees)
+
+    
+    feature_q = extract_feature_vector(B, q)
+
+    
+    nearest_index = t.get_nns_by_vector(feature_q, 1)[0]
+
+    return nearest_index
 
 def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     return None
+
+
+def computeFeatures(pyramid):
+    '''
+    Given a pyramid of images, returns a pyramid of images with
+    R, G, B, and feature channels.
+    The input is a list of numpy arrays of shape (numRows x numColumns x 3).
+    Output is a list of numpy arrays of shape (numRows x numColumns x numFeatures)
+
+    R, G, and B could be included or not included in the features
+    '''
+    # Constants
+    num_levels = len(pyramid)
+    num_features = 3
+
+    feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], num_features)) for l in num_levels]
+
+    # For each level of the pyramid...
+    for l in range(num_levels):
+        feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
+        feature_pyramid[l][:, :, 1] = 
+        feature_pyramid[l][:, :, 2] = 
+        
+
+def computeLuminance(im_RGB):
+    im_YIQ = colorsys.rgb_to_yiq(im_RGB)
+    return im_YIQ[:, :, 0]
+
+def edge_detection(image_path, low_threshold=100, high_threshold=200):
+    # Read the image in grayscale
+    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    
+    # Check if image is loaded
+    if image is None:
+        raise ValueError("Image not found or path is incorrect")
+
+    # Apply Canny edge detection
+    edges = cv2.Canny(image, low_threshold, high_threshold)
+    
+    return edges
