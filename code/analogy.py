@@ -13,7 +13,7 @@ def createImageAnalogy(A, A_prime, B):
     analogies.
     '''
     # Constants
-    num_levels = 5
+    num_levels = 3
 
     # Create Gaussian pyramids
     pyramid_A = createGaussianPyramid(A, num_levels)
@@ -141,7 +141,7 @@ def computeFeatures(pyramid):
     '''
     # Constants
     num_levels = len(pyramid)
-    num_features = 17
+    num_features = 13 # luminance + 12 steerable pyramid responses
 
     feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], num_features)) for l in range(num_levels)]
 
@@ -150,7 +150,6 @@ def computeFeatures(pyramid):
     for l in range(num_levels):
         feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
         feature_pyramid[l][:, :, 1:] = computeSteerablePyramidResponse(pyramid[l])
-        print(feature_pyramid[l].shape)
 
 def computeLuminance(im_BGR):
     '''
@@ -164,11 +163,11 @@ def computeSteerablePyramidResponse(im):
     im = computeLuminance(im)
 
     # Apply the steerable pyramid
-    filt = 'sp3_filters'
-    pyr = pt.pyramids.SteerablePyramidSpace(im, height=4, order=3)
+    pyr = pt.pyramids.SteerablePyramidSpace(im, height=3, order=3)
 
     # Get target size (original size of full scale image)
-    target_shape = pyr.pyr_coeffs[(0, 0)].shape
+    target_shape = (pyr.pyr_coeffs[(0, 0)].shape[1],
+                    pyr.pyr_coeffs[(0, 0)].shape[0])
 
     # Put the steerable pyramid response in array format
     responses = []
@@ -179,7 +178,6 @@ def computeSteerablePyramidResponse(im):
             # Add to the stack of responses
             responses.append(response_resized)
     result = np.stack(responses, axis=-1)
-    print(result.shape)
     return result
 
 # won't be using this probably -> need to use steerable pyramids

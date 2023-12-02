@@ -131,6 +131,6 @@ if __name__ == '__main__':
     #     func_map[args["method"]](args)
     # else:
     #     print(f"{args['method']} is not a supported command. Try using 'synthesis' or 'transfer'")
-    A = plt.imread('../data/orange.jpg')
+    A = plt.imread('../data/big-orange.jpeg')
     pyramid_A = createGaussianPyramid(A, 5)
     A = computeFeatures(pyramid_A)
