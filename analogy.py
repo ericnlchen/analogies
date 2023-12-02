@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 import colorsys
+import pyrtools as pt
+from annoy import AnnoyIndex # pip install annoy
 
 def createImageAnalogy(A, A_prime, B):
     '''
@@ -111,21 +113,29 @@ def computeFeatures(pyramid):
     '''
     # Constants
     num_levels = len(pyramid)
-    num_features = 3
+    num_features = 10
 
     feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], num_features)) for l in num_levels]
 
     # For each level of the pyramid...
+    # Steerable pyramid library etc: https://github.com/LabForComputationalVision/pyPyrTools
     for l in range(num_levels):
         feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
-        feature_pyramid[l][:, :, 1] = 
-        feature_pyramid[l][:, :, 2] = 
-        
+        feature_pyramid[l][:, :, 1:9] = computeSteerablePyramidResponse(pyramid[l])
 
 def computeLuminance(im_RGB):
+    '''
+    Returns the Y channel from YIQ representation of the image
+    '''
     im_YIQ = colorsys.rgb_to_yiq(im_RGB)
     return im_YIQ[:, :, 0]
 
+def computeSteerablePyramidResponse(im):
+    filt = 'sp3_filters' # There are 4 orientations for this filter
+    pyr = pt.pyramids.SteerablePyramidSpace(im, height=4, order=3)
+    return pyr.pyr_coeffs
+
+# won't be using this probably -> need to use steerable pyramids
 def edge_detection(image_path, low_threshold=100, high_threshold=200):
     # Read the image in grayscale
     image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
