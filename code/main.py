@@ -117,16 +117,17 @@ def transfer(args):
 
 
 if __name__ == '__main__':
-    func_map = {'transfer': transfer, 'synthesis': synthesis}
+    # func_map = {'transfer': transfer, 'synthesis': synthesis}
 
-    parser = argparse.ArgumentParser(description="CSCI1290 - Project Texture")
-    parser.add_argument("method", help="Name of the method to run ('transfer' or 'synthesis')")
-    parser.add_argument("-i", "--input", help="Name of the input image with extension. Used for method 'synthesis', and is the image to texturize in method 'transfer'.")
-    parser.add_argument("-t", "--transfersource", help="Name of the texture image with extension to be used as the source of the texture in method 'transfer'")
-    parser.add_argument("-q", "--quiet", help="used to stop displaying images", action="store_true")
-    args = vars(parser.parse_args())
+    # parser = argparse.ArgumentParser(description="CSCI1290 - Project Texture")
+    # parser.add_argument("method", help="Name of the method to run ('transfer' or 'synthesis')")
+    # parser.add_argument("-i", "--input", help="Name of the input image with extension. Used for method 'synthesis', and is the image to texturize in method 'transfer'.")
+    # parser.add_argument("-t", "--transfersource", help="Name of the texture image with extension to be used as the source of the texture in method 'transfer'")
+    # parser.add_argument("-q", "--quiet", help="used to stop displaying images", action="store_true")
+    # args = vars(parser.parse_args())
 
-    if args["method"] in func_map:
-        func_map[args["method"]](args)
-    else:
-        print(f"{args['method']} is not a supported command. Try using 'synthesis' or 'transfer'")
+    # if args["method"] in func_map:
+    #     func_map[args["method"]](args)
+    # else:
+    #     print(f"{args['method']} is not a supported command. Try using 'synthesis' or 'transfer'")
+    im = plt.imread()

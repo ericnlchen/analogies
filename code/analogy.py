@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import colorsys
-import pyrtools as pt # pip install pyrtools
+import pyrtools as pt
 from annoy import AnnoyIndex # pip install annoy
 
 def createImageAnalogy(A, A_prime, B):
