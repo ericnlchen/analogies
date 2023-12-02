@@ -13,7 +13,7 @@ def createImageAnalogy(A, A_prime, B):
     analogies.
     '''
     # Constants
-    num_levels = 3
+    num_levels = 1 # TODO: make this higher
 
     # Create Gaussian pyramids
     pyramid_A = createGaussianPyramid(A, num_levels)
@@ -33,14 +33,17 @@ def createImageAnalogy(A, A_prime, B):
     #   store the pixel indices where those colors came from in A'
     s = np.zeros(A_prime.shape)
 
-    # NOTE: After this point, an image (A, B, etc) can be indexed as follows:
-    #   A[l][p_row, p_col, c] where:
-    #       - l is the level of the gaussian pyramid
-    #       - p_row is the pixel's row
-    #       - p_col is the pixel's column
-    #       - c is the channel number (including R, G, B, and additional features)
+    '''
+    NOTE: After this point, an image (A, B, etc) can be indexed as follows:
+      A[l][p_row, p_col, c] where:
+          - l is the level of the gaussian pyramid
+          - p_row is the pixel's row
+          - p_col is the pixel's column
+          - c is the channel number (including R, G, B, and additional features)
+    '''
 
     # Synthesize B_prime level by level
+    # seik: why are we not doing for `l in range(num_levels) - 1, -1, -1` which means we're going from coarest to finest? 
     for l in range(num_levels):
         # For each pixel q at (q_row, q_col)...
         for q_row in range(B_prime[l].shape[0]):
@@ -56,7 +59,7 @@ def createImageAnalogy(A, A_prime, B):
                 # Keep track of the mapping between p and q
                 s[l][q] = p
 
-    return B_prime[num_levels-1]
+    return B_prime[0]
 
 def createGaussianPyramid(img, level):
     gaus_pyramid = [img]
@@ -69,7 +72,8 @@ def createGaussianPyramid(img, level):
 def bestMatch(A, A_prime, B, B_prime, s, l, q):
     P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q)
     P_coh = bestCoherenceMatch(A, A_prime, B,B_prime, s, l, q)
-    # NOTE:F_l[p] to denote the concatenation of all the feature vectors in neighborhood
+    '''   
+    NOTE:F_l[p] to denote the concatenation of all the feature vectors in neighborhood
     d_app = (F_l[P_app]-F_l[q])**2
     d_coh =  (F_l[P_coh]-F_l[q])**2
     # NOTE: k represents an estimate of the scale of "textons" at level l
@@ -77,39 +81,65 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
         return P_coh
     else:
         return P_app
+    '''
+    return P_app
 
 # Algorithm: using approximate nearest neighbor search
-def bestApproximateMatch(A, A_prime, B, B_prime, l, q, features_A, feature_length):
+def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     '''
     l is for level l
     q is the point inside image B
     '''
-    # skeloton code for bestApproximateMatch
-
-    #TREE is a tuning parameter
+    # TREE is a tuning parameter
     TREE = 10
-    _,width,_ = A.shape[:-1]
+    _, width, feature_length= A.shape
     
     t = AnnoyIndex(feature_length, 'euclidean')
 
-    
-    for i, feature in enumerate(features_A):
-        t.add_item(i, feature)
+    # Randomly sample pixel indices from A
+    num_samples = 2000
+    patch_size = 5
 
+    random_rows = np.random.randint(0, A.shape[0] - patch_size, size=num_samples)
+    random_cols = np.random.randint(0, A.shape[1] - patch_size, size=num_samples)
+
+    i = 0
+    for row, col in zip(random_rows, random_cols):
+        feature = getFeatureAtQ(A, (row, col))
+        t.add_item(i, feature)
+        i += 1
+    
     t.build(TREE)
 
-    
     feature_q = getFeatureAtQ(B, q)
-
     
     neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
 
-    row = neighbor_index // width
-    col = neighbor_index % width
+    first_pixel_row = random_rows[neighbor_index]
+    first_pixel_col = random_cols[neighbor_index]
 
-    return (row,col)
+    center_pixel_row = first_pixel_row + patch_size // 2
+    center_pixel_col = first_pixel_col + patch_size // 2
 
+    return (center_pixel_row, center_pixel_col)
 
+def getFeatureAtQ(A, q):
+
+    feature_length = A.shape[2]
+    patch_size = 5
+    # Get a patch
+    patch = A[q[0]:q[0]+patch_size, q[1]:q[1]+patch_size, :]
+
+    # Multiply by gaussian kernel to give more weight to center pixels of patch
+    kernel = cv2.getGaussianKernel(patch_size) # default sigma = 0.3*((patch_size-1)*0.5 - 1) + 0.8
+    patch = patch * np.stack([kernel] * feature_length, axis=-1)
+
+    # Flatten features
+    feature = np.reshape(patch, (-1))
+
+    return feature
+
+    
 
 def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     N_q = define_the_neighborhood(B_prime, q, l) # some kind of function to determine the neighborhood

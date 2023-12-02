@@ -134,3 +134,4 @@ if __name__ == '__main__':
     A = plt.imread('../data/big-orange.jpeg')
     pyramid_A = createGaussianPyramid(A, 5)
     A = computeFeatures(pyramid_A)
+    
