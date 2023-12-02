@@ -1,8 +1,11 @@
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
+import pyrtools as pt # pip install pyrtools
+from annoy import AnnoyIndex # pip install annoy ; https://sds-aau.github.io/M3Port19/portfolio/ann/
 import colorsys
-import pyrtools as pt
-from annoy import AnnoyIndex # pip install annoy
+from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+
 
 def createImageAnalogy(A, A_prime, B):
     '''
@@ -76,30 +79,55 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
         return P_app
 
 # Algorithm: using approximate nearest neighbor search
-def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
+def bestApproximateMatch(A, A_prime, B, B_prime, l, q, features_A, feature_length):
     '''
     l is for level l
     q is the point inside image B
     '''
     # skeloton code for bestApproximateMatch
+
+    #TREE is a tuning parameter
+    TREE = 10
+    _,width,_ = A.shape[:-1]
+    
     t = AnnoyIndex(feature_length, 'euclidean')
 
     
-    for i, feature in enumerate(extract_features(A)):
+    for i, feature in enumerate(features_A):
         t.add_item(i, feature)
 
-    t.build(num_trees)
+    t.build(TREE)
 
     
-    feature_q = extract_feature_vector(B, q)
+    feature_q = getFeatureAtQ(B, q)
 
     
-    nearest_index = t.get_nns_by_vector(feature_q, 1)[0]
+    neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
 
-    return nearest_index
+    row = neighbor_index // width
+    col = neighbor_index % width
+
+    return (row,col)
+
+
 
 def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
-    return None
+    N_q = define_the_neighborhood(B_prime, q, l) # some kind of function to determine the neighborhood
+    
+    r_star = None
+    min_diff = float('inf')
+    
+    for r in N_q:
+        # ||F_l(s(r)+(q−r))−F_l(q)||^2
+        cur_diff = np.linalg.norm(feature_vector(A, A_prime, B, B_prime, s, r, q, l) - getFeatureAtQ(B,q))
+        
+        # update the best pixel
+        if cur_diff < min_diff:
+            min_diff = cur_diff
+            r_star = r
+    # calcluate best coherent match
+    return s[r_star] + (q - r_star)
+    
 
 
 def computeFeatures(pyramid):
@@ -113,27 +141,46 @@ def computeFeatures(pyramid):
     '''
     # Constants
     num_levels = len(pyramid)
-    num_features = 10
+    num_features = 17
 
-    feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], num_features)) for l in num_levels]
+    feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], num_features)) for l in range(num_levels)]
 
     # For each level of the pyramid...
     # Steerable pyramid library etc: https://github.com/LabForComputationalVision/pyPyrTools
     for l in range(num_levels):
         feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
-        feature_pyramid[l][:, :, 1:9] = computeSteerablePyramidResponse(pyramid[l])
+        feature_pyramid[l][:, :, 1:] = computeSteerablePyramidResponse(pyramid[l])
+        print(feature_pyramid[l].shape)
 
-def computeLuminance(im_RGB):
+def computeLuminance(im_BGR):
     '''
     Returns the Y channel from YIQ representation of the image
     '''
-    im_YIQ = colorsys.rgb_to_yiq(im_RGB)
-    return im_YIQ[:, :, 0]
+    # TODO: use YIQ
+    return cv2.cvtColor(im_BGR, cv2.COLOR_BGR2GRAY)
 
 def computeSteerablePyramidResponse(im):
-    filt = 'sp3_filters' # There are 4 orientations for this filter
+    # Use the grayscale image as input
+    im = computeLuminance(im)
+
+    # Apply the steerable pyramid
+    filt = 'sp3_filters'
     pyr = pt.pyramids.SteerablePyramidSpace(im, height=4, order=3)
-    return pyr.pyr_coeffs
+
+    # Get target size (original size of full scale image)
+    target_shape = pyr.pyr_coeffs[(0, 0)].shape
+
+    # Put the steerable pyramid response in array format
+    responses = []
+    for key, response in pyr.pyr_coeffs.items():
+        if (type(key) == tuple):
+            # Resize to match the original image size
+            response_resized = cv2.resize(response, target_shape, interpolation=cv2.INTER_NEAREST)
+            # Add to the stack of responses
+            responses.append(response_resized)
+    result = np.stack(responses, axis=-1)
+    print(result.shape)
+    return result
 
 # won't be using this probably -> need to use steerable pyramids
 def edge_detection(image_path, low_threshold=100, high_threshold=200):

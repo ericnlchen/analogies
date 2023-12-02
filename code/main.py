@@ -25,8 +25,9 @@ To run the texture transfer section:
 import os
 import numpy as np
 import cv2
-from student import image_synthesis, image_texture
+from analogy import createGaussianPyramid, computeFeatures
 import argparse
+import matplotlib.pyplot as plt
 
 
 SOURCE_PATH = '../data'
@@ -130,4 +131,6 @@ if __name__ == '__main__':
     #     func_map[args["method"]](args)
     # else:
     #     print(f"{args['method']} is not a supported command. Try using 'synthesis' or 'transfer'")
-    im = plt.imread()
+    A = plt.imread('../data/orange.jpg')
+    pyramid_A = createGaussianPyramid(A, 5)
+    A = computeFeatures(pyramid_A)
