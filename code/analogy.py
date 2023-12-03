@@ -7,7 +7,7 @@ import colorsys
 from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 
 
-def createImageAnalogy(A, A_prime, B):
+def createImageAnalogy(A, A_prime, B, show=False):
     '''
     Given images A, A_prime and B, returns the image B_prime using
     analogies.
@@ -15,23 +15,25 @@ def createImageAnalogy(A, A_prime, B):
     # Constants
     num_levels = 1 # TODO: make this higher
 
+    print("Initializing data structures...")
+
     # Create Gaussian pyramids
     pyramid_A = createGaussianPyramid(A, num_levels)
     pyramid_A_prime = createGaussianPyramid(A_prime, num_levels)
     pyramid_B = createGaussianPyramid(B, num_levels)
+    pyramid_B_prime = [np.zeros_like(pyramid_B[l]) for l in range(num_levels)]
 
     # Get features for each level of Gaussian pyramids
     #   ex. A becomes a pyramid of images with R, G, B, and feature channels
-    A = computeFeatures(pyramid_A)
-    A_prime = computeFeatures(pyramid_A_prime)
-    B = computeFeatures(pyramid_B)
-    B_prime = np.zeros_like(B)
+    features_A = computeFeatures(pyramid_A)
+    features_A_prime = computeFeatures(pyramid_A_prime)
+    features_B = computeFeatures(pyramid_B)
 
     # The s data structure is used to store the pixel
     #   mappings that we find at each level.
     #   It will be the same shape as B' but instead of storing colors it will
     #   store the pixel indices where those colors came from in A'
-    s = np.zeros(A_prime.shape)
+    s = [np.zeros((pyramid_B_prime[l].shape[0], pyramid_B_prime[l].shape[1]), dtype=object) for l in range(num_levels)]
 
     '''
     NOTE: After this point, an image (A, B, etc) can be indexed as follows:
@@ -46,20 +48,23 @@ def createImageAnalogy(A, A_prime, B):
     # seik: why are we not doing for `l in range(num_levels) - 1, -1, -1` which means we're going from coarest to finest? 
     for l in range(num_levels):
         # For each pixel q at (q_row, q_col)...
-        for q_row in range(B_prime[l].shape[0]):
-            for q_col in range(B_prime[l].shape[1]):
+        for q_row in range(pyramid_B_prime[l].shape[0]):
+            for q_col in range(pyramid_B_prime[l].shape[1]):
                 q = (q_row, q_col)
+
+                if (show):
+                    print("Processing pixel at index {}".format(q))
                 
                 # Find the index p in A and A' which best matches index q in B and B'
-                p = bestMatch(A, A_prime, B, B_prime, s, l, q)
+                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q)
 
                 # Set the pixel in B' equal to the match we found
-                B_prime[l][q] = A_prime[l][p]
+                pyramid_B_prime[l][q[0], q[1]] = pyramid_A_prime[l][p[0], p[1]]
 
                 # Keep track of the mapping between p and q
-                s[l][q] = p
+                s[l][q[0], q[1]] = p
 
-    return B_prime[0]
+    return pyramid_B_prime[0]
 
 def createGaussianPyramid(img, level):
     gaus_pyramid = [img]
@@ -71,17 +76,16 @@ def createGaussianPyramid(img, level):
 
 def bestMatch(A, A_prime, B, B_prime, s, l, q):
     P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q)
-    P_coh = bestCoherenceMatch(A, A_prime, B,B_prime, s, l, q)
-    '''   
-    NOTE:F_l[p] to denote the concatenation of all the feature vectors in neighborhood
-    d_app = (F_l[P_app]-F_l[q])**2
-    d_coh =  (F_l[P_coh]-F_l[q])**2
-    # NOTE: k represents an estimate of the scale of "textons" at level l
-    if d_coh <= d_app * (1 + np.power(2,l - L) * k):
-        return P_coh
-    else:
-        return P_app
-    '''
+    # P_coh = bestCoherenceMatch(A, A_prime, B,B_prime, s, l, q)
+    # NOTE:F_l[p] to denote the concatenation of all the feature vectors in neighborhood
+    # d_app = (F_l[P_app]-F_l[q])**2
+    # d_coh =  (F_l[P_coh]-F_l[q])**2
+    # # NOTE: k represents an estimate of the scale of "textons" at level l
+    # if d_coh <= d_app * (1 + np.power(2,l - L) * k):
+    #     return P_coh
+    # else:
+    #     return P_app
+    
     return P_app
 
 # Algorithm: using approximate nearest neighbor search
@@ -90,28 +94,34 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     l is for level l
     q is the point inside image B
     '''
-    # TREE is a tuning parameter
-    TREE = 10
-    _, width, feature_length= A.shape
-    
-    t = AnnoyIndex(feature_length, 'euclidean')
 
-    # Randomly sample pixel indices from A
     num_samples = 2000
     patch_size = 5
+    A_l = A[l]
+    B_l = B[l]
 
-    random_rows = np.random.randint(0, A.shape[0] - patch_size, size=num_samples)
-    random_cols = np.random.randint(0, A.shape[1] - patch_size, size=num_samples)
+    # TREE is a tuning parameter
+    TREE = 10
+    _, width, num_features = A_l.shape
+    
+    t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+
+    # Randomly sample pixel indices from A
+    random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
+    random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
 
     i = 0
     for row, col in zip(random_rows, random_cols):
-        feature = getFeatureAtQ(A, (row, col))
+        feature = getFeatureAtQ(A_l, (row, col))
         t.add_item(i, feature)
         i += 1
     
     t.build(TREE)
 
-    feature_q = getFeatureAtQ(B, q)
+    feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
+    # NEED TO USE PADDING TO FIX EDGE CASE
+    # TODO: change q to the top left corner of the patch, instead of the center when passing
+    # to the getFeatureAtQ function
     
     neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
 
@@ -124,39 +134,41 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     return (center_pixel_row, center_pixel_col)
 
 def getFeatureAtQ(A, q):
-
     feature_length = A.shape[2]
     patch_size = 5
     # Get a patch
     patch = A[q[0]:q[0]+patch_size, q[1]:q[1]+patch_size, :]
 
     # Multiply by gaussian kernel to give more weight to center pixels of patch
-    kernel = cv2.getGaussianKernel(patch_size) # default sigma = 0.3*((patch_size-1)*0.5 - 1) + 0.8
-    patch = patch * np.stack([kernel] * feature_length, axis=-1)
+    kernel_x = cv2.getGaussianKernel(patch_size, sigma=0.3*((patch_size-1)*0.5 - 1) + 0.8)
+    kernel_2d = np.outer(kernel_x, kernel_x.T)
+    # Normalize the kernel to ensure its values sum up to 1
+    kernel_2d /= np.sum(kernel_2d)
+
+    patch = patch * np.stack([kernel_2d] * feature_length, axis=-1)
 
     # Flatten features
     feature = np.reshape(patch, (-1))
 
     return feature
-
     
 
-def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
-    N_q = define_the_neighborhood(B_prime, q, l) # some kind of function to determine the neighborhood
+# def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
+#     N_q = define_the_neighborhood(B_prime, q, l) # some kind of function to determine the neighborhood
     
-    r_star = None
-    min_diff = float('inf')
+#     r_star = None
+#     min_diff = float('inf')
     
-    for r in N_q:
-        # ||F_l(s(r)+(q−r))−F_l(q)||^2
-        cur_diff = np.linalg.norm(feature_vector(A, A_prime, B, B_prime, s, r, q, l) - getFeatureAtQ(B,q))
+#     for r in N_q:
+#         # ||F_l(s(r)+(q−r))−F_l(q)||^2
+#         cur_diff = np.linalg.norm(feature_vector(A, A_prime, B, B_prime, s, r, q, l) - getFeatureAtQ(B,q))
         
-        # update the best pixel
-        if cur_diff < min_diff:
-            min_diff = cur_diff
-            r_star = r
-    # calcluate best coherent match
-    return s[r_star] + (q - r_star)
+#         # update the best pixel
+#         if cur_diff < min_diff:
+#             min_diff = cur_diff
+#             r_star = r
+#     # calcluate best coherent match
+#     return s[r_star] + (q - r_star)
     
 
 
@@ -180,6 +192,8 @@ def computeFeatures(pyramid):
     for l in range(num_levels):
         feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
         feature_pyramid[l][:, :, 1:] = computeSteerablePyramidResponse(pyramid[l])
+
+    return feature_pyramid
 
 def computeLuminance(im_BGR):
     '''

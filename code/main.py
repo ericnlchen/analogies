@@ -25,10 +25,11 @@ To run the texture transfer section:
 import os
 import numpy as np
 import cv2
-from analogy import createGaussianPyramid, computeFeatures
+from analogy import createGaussianPyramid, computeFeatures, getFeatureAtQ, createImageAnalogy
 import argparse
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 
 SOURCE_PATH = '../data'
 OUTPUT_PATH = '../output/'
@@ -131,7 +132,15 @@ if __name__ == '__main__':
     #     func_map[args["method"]](args)
     # else:
     #     print(f"{args['method']} is not a supported command. Try using 'synthesis' or 'transfer'")
-    A = plt.imread('../data/big-orange.jpeg')
-    pyramid_A = createGaussianPyramid(A, 5)
-    A = computeFeatures(pyramid_A)
+    # A = plt.imread('../data/big-orange.jpeg')
+    # pyramid_A = createGaussianPyramid(A, 5)
+    # A = computeFeatures(pyramid_A)
+    # feature_vector = getFeatureAtQ(A[0], (0, 0))
+    # print(feature_vector.shape)
     
+    A = plt.imread('../data/big-orange.jpeg')
+    A_prime = cv2.GaussianBlur(A,(5,5),0)
+    B = plt.imread('../data/big-apple.jpeg')
+    B_prime = createImageAnalogy(A, A_prime, B, show=True)
+    plt.imshow(B_prime)
+    plt.show()
