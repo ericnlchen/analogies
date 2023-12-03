@@ -7,11 +7,14 @@ import colorsys
 from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 
 
-def createImageAnalogy(A, A_prime, B, show=False):
+def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     '''
     Given images A, A_prime and B, returns the image B_prime using
     analogies.
     '''
+    if (seed_val is not None):
+        np.random.seed(seed_val)
+
     # Constants
     num_levels = 1 # TODO: make this higher
 
@@ -75,18 +78,26 @@ def createGaussianPyramid(img, level):
     return gaus_pyramid
 
 def bestMatch(A, A_prime, B, B_prime, s, l, q):
+    A_l = A[l]
+    B_l = B[l]
+
     P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q)
-    # P_coh = bestCoherenceMatch(A, A_prime, B,B_prime, s, l, q)
+    P_coh = bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q)
+
+    if P_coh is None:
+        return P_app
+
     # NOTE:F_l[p] to denote the concatenation of all the feature vectors in neighborhood
-    # d_app = (F_l[P_app]-F_l[q])**2
-    # d_coh =  (F_l[P_coh]-F_l[q])**2
-    # # NOTE: k represents an estimate of the scale of "textons" at level l
-    # if d_coh <= d_app * (1 + np.power(2,l - L) * k):
-    #     return P_coh
-    # else:
-    #     return P_app
-    
-    return P_app
+    d_app = np.linalg.norm(getFeatureAtQ(A_l, P_app) - getFeatureAtQ(B_l, q))
+    d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
+
+    # NOTE: k represents an estimate of the scale of "textons" at level l
+    k = 0.7
+    # TODO: add the number of levels to this weighting function
+    if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
+        return P_coh
+    else:
+        return P_app
 
 # Algorithm: using approximate nearest neighbor search
 def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
@@ -112,16 +123,13 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
 
     i = 0
     for row, col in zip(random_rows, random_cols):
-        feature = getFeatureAtQ(A_l, (row, col))
+        feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
         t.add_item(i, feature)
         i += 1
     
     t.build(TREE)
 
-    feature_q = getFeatureAtQ(B_l, (q[0] - patch_size // 2, q[1] - patch_size // 2))
-    # NEED TO USE PADDING TO FIX EDGE CASE
-    # TODO: change q to the top left corner of the patch, instead of the center when passing
-    # to the getFeatureAtQ function
+    feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
     
     neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
 
@@ -134,30 +142,42 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     return (center_pixel_row, center_pixel_col)
 
 def getFeatureAtQ(A, q):
+    '''
+    Gets the full features for the patch surrounding the pixel q
+    (q is in the center of the patch)
+    '''
+    if (q[0] < 0 or q[0] >= A.shape[0] or
+        q[1] < 0 or q[1] >= A.shape[1]):
+        return None
+
+    # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
     patch_size = 5
+
+    q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
+
     # Get a patch
-    if q[0] < 0 or q[1] < 0 or q[0]+patch_size >= A.shape[0] or q[1]+patch_size >= A.shape[1]:
+    if q_top_left[0] < 0 or q_top_left[1] < 0 or q_top_left[0]+patch_size >= A.shape[0] or q_top_left[1]+patch_size >= A.shape[1]:
         patch = np.zeros((patch_size, patch_size, feature_length))
         for i in range(patch_size):
             for j in range(patch_size):
                 A_i = 0
                 A_j = 0
-                if q[0] + i < 0:
+                if q_top_left[0] + i < 0:
                     A_i = 0
-                elif q[0] + i >= A.shape[0]:
+                elif q_top_left[0] + i >= A.shape[0]:
                     A_i = A.shape[0] - 1
                 else:
-                    A_i = q[0] + i
-                if q[1] + j < 0:
+                    A_i = q_top_left[0] + i
+                if q_top_left[1] + j < 0:
                     A_j = 0
-                elif q[1] + j >= A.shape[1]:
+                elif q_top_left[1] + j >= A.shape[1]:
                     A_j = A.shape[1] - 1
                 else:
-                    A_j = q[1] + j
+                    A_j = q_top_left[1] + j
                 patch[i, j] = A[A_i, A_j]
     else:
-        patch = A[q[0]:q[0]+patch_size, q[1]:q[1]+patch_size, :]
+        patch = A[q_top_left[0]:q_top_left[0]+patch_size, q_top_left[1]:q_top_left[1]+patch_size, :]
 
     # Multiply by gaussian kernel to give more weight to center pixels of patch
     kernel_x = cv2.getGaussianKernel(patch_size, sigma=0.3*((patch_size-1)*0.5 - 1) + 0.8)
@@ -171,26 +191,49 @@ def getFeatureAtQ(A, q):
     feature = np.reshape(patch, (-1))
 
     return feature
+
+def clamp(value, low, high):
+    return max(min(value, high), low)
     
 
-# def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
-#     N_q = define_the_neighborhood(B_prime, q, l) # some kind of function to determine the neighborhood
-    
-#     r_star = None
-#     min_diff = float('inf')
-    
-#     for r in N_q:
-#         # ||F_l(s(r)+(q−r))−F_l(q)||^2
-#         cur_diff = np.linalg.norm(feature_vector(A, A_prime, B, B_prime, s, r, q, l) - getFeatureAtQ(B,q))
-        
-#         # update the best pixel
-#         if cur_diff < min_diff:
-#             min_diff = cur_diff
-#             r_star = r
-#     # calcluate best coherent match
-#     return s[r_star] + (q - r_star)
-    
+def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
+    B_prime_l = B_prime[l]
+    B_l = B[l]
+    A_l = A[l]
 
+    patch_size = 5
+    min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
+    max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
+    min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
+    max_col = clamp(q[1] + patch_size//2, 0, B_prime_l.shape[1] - 1)
+
+    r_star = None
+    smallest_dist = np.inf
+    
+    for r_row in range(min_row, max_row + 1):
+        for r_col in range(min_col, max_col + 1):
+            if (r_row < q[0] or (r_row == q[0] and r_col < q[1])):
+                # This is a valid neighbor, do the calculation
+                s_r = s[l][r_row, r_col]
+                F_s_r = getFeatureAtQ(A_l, (s_r[0] + q[0] - r_row, s_r[1] + q[1] - r_col))
+                if F_s_r is None:
+                    continue
+                F_q = getFeatureAtQ(B_l, q)
+                distance = np.linalg.norm(F_s_r - F_q)
+                if distance < smallest_dist:
+                    r_star = (r_row, r_col)
+                    smallest_dist = distance
+    if r_star == None:
+        return None
+    else:
+        s_r_star = s[l][r_star[0], r_star[1]]
+        p_coh_r = s_r_star[0] + q[0] - r_star[0]
+        p_coh_c = s_r_star[1] + q[1] - r_star[1]
+        # Check if candidate point is out of bounds
+        if (p_coh_r >= A_l.shape[0] or p_coh_r < 0 or
+            p_coh_c >= A_l.shape[1] or p_coh_c < 0):
+            return None
+        return (p_coh_r, p_coh_c)
 
 def computeFeatures(pyramid):
     '''

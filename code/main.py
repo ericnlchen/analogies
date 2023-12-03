@@ -21,7 +21,7 @@ To run the texture transfer section:
     Only the filename is needed, not the full path (i.e. 'toast.png' not '~/<dir1>/<dir2>/toast.png')
 
 '''
-
+'''
 import os
 import numpy as np
 import cv2
@@ -37,9 +37,6 @@ SYNTHESIS_OUTPUT_PATH = os.path.join(OUTPUT_PATH, 'synthesis')
 TRANSFER_OUTPUT_PATH = os.path.join(OUTPUT_PATH, 'transfer')
 
 def synthesis(args):
-    '''
-    Runs the texture synthesis part of the project
-    '''
     # List the full file names of each of the input images
     input_list = [os.path.join(SOURCE_PATH, 'textures', img) for img in os.listdir(os.path.join(SOURCE_PATH, 'textures'))\
                  if img.endswith('.jpg') or img.endswith('.bmp') or img.endswith('.png')]
@@ -80,10 +77,6 @@ def synthesis(args):
 
 
 def transfer(args):
-    '''
-    Runs the texture transfer part of the project
-    python main.py transfer -i ../images/lincoln.jpg -t ../textures/toast.png 
-    '''
 
     if args['input'] is None or args['transfersource'] is None:
         print("You must provide an input image and a transfer source image for texture transfer")
@@ -114,11 +107,8 @@ def transfer(args):
         input_name = args['input'].split(".")[0]
         transfersource_name = args['transfersource'].split(".")[0]
         cv2.imwrite(os.path.join(TRANSFER_OUTPUT_PATH, f"{input_name}_{transfersource_name}_transfer.jpg"), output*255)
-
-
-
-
-if __name__ == '__main__':
+'''
+# if __name__ == "__main__":
     # func_map = {'transfer': transfer, 'synthesis': synthesis}
 
     # parser = argparse.ArgumentParser(description="CSCI1290 - Project Texture")
@@ -137,13 +127,20 @@ if __name__ == '__main__':
     # A = computeFeatures(pyramid_A)
     # feature_vector = getFeatureAtQ(A[0], (0, 0))
     # print(feature_vector.shape)
+
+import matplotlib.pyplot as plt
+import cv2
+from analogy import createImageAnalogy
+
+if __name__ == '__main__':
     
-    A = plt.imread('../data/big-orange.jpeg')
-    A_prime = cv2.GaussianBlur(A, (10,10), 0)
-    plt.imshow(A_prime)
-    plt.show()
-    B = plt.imread('../data/big-apple.jpeg')
-    B_prime = createImageAnalogy(A, A_prime, B, show=True)
+    A = plt.imread('../data/r1.jpeg')
+    A_prime = plt.imread('../data/r2.jpeg')
+    # A_prime = cv2.GaussianBlur(A, (15,15), 10)
+    # plt.imshow(A_prime)
+    # plt.show()
+    B = plt.imread('../data/t1.jpeg')
+    B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
     plt.imshow(B_prime)
     plt.show()
-    plt.imsave("blurry-apple.jpg", B_prime)
+    plt.imsave("../results/output.jpg", B_prime)
