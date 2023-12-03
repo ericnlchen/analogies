@@ -139,8 +139,11 @@ if __name__ == '__main__':
     # print(feature_vector.shape)
     
     A = plt.imread('../data/big-orange.jpeg')
-    A_prime = cv2.GaussianBlur(A,(5,5),0)
+    A_prime = cv2.GaussianBlur(A, (10,10), 0)
+    plt.imshow(A_prime)
+    plt.show()
     B = plt.imread('../data/big-apple.jpeg')
     B_prime = createImageAnalogy(A, A_prime, B, show=True)
     plt.imshow(B_prime)
     plt.show()
+    plt.imsave("blurry-apple.jpg", B_prime)

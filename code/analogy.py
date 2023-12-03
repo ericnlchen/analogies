@@ -95,7 +95,7 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     q is the point inside image B
     '''
 
-    num_samples = 2000
+    num_samples = 100 # 2000
     patch_size = 5
     A_l = A[l]
     B_l = B[l]
@@ -118,7 +118,7 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     
     t.build(TREE)
 
-    feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
+    feature_q = getFeatureAtQ(B_l, (q[0] - patch_size // 2, q[1] - patch_size // 2))
     # NEED TO USE PADDING TO FIX EDGE CASE
     # TODO: change q to the top left corner of the patch, instead of the center when passing
     # to the getFeatureAtQ function
@@ -137,7 +137,27 @@ def getFeatureAtQ(A, q):
     feature_length = A.shape[2]
     patch_size = 5
     # Get a patch
-    patch = A[q[0]:q[0]+patch_size, q[1]:q[1]+patch_size, :]
+    if q[0] < 0 or q[1] < 0 or q[0]+patch_size >= A.shape[0] or q[1]+patch_size >= A.shape[1]:
+        patch = np.zeros((patch_size, patch_size, feature_length))
+        for i in range(patch_size):
+            for j in range(patch_size):
+                A_i = 0
+                A_j = 0
+                if q[0] + i < 0:
+                    A_i = 0
+                elif q[0] + i >= A.shape[0]:
+                    A_i = A.shape[0] - 1
+                else:
+                    A_i = q[0] + i
+                if q[1] + j < 0:
+                    A_j = 0
+                elif q[1] + j >= A.shape[1]:
+                    A_j = A.shape[1] - 1
+                else:
+                    A_j = q[1] + j
+                patch[i, j] = A[A_i, A_j]
+    else:
+        patch = A[q[0]:q[0]+patch_size, q[1]:q[1]+patch_size, :]
 
     # Multiply by gaussian kernel to give more weight to center pixels of patch
     kernel_x = cv2.getGaussianKernel(patch_size, sigma=0.3*((patch_size-1)*0.5 - 1) + 0.8)
