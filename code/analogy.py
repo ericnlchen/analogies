@@ -114,22 +114,53 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
     # TREE is a tuning parameter
     TREE = 10
     _, width, num_features = A_l.shape
+    num_PCA_features = 5
+    PCA_enabled = False
     
-    t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+    if (PCA_enabled):
+        t = AnnoyIndex(num_PCA_features, 'euclidean')
+    else:
+        t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
 
     # Randomly sample pixel indices from A
     random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
     random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
 
-    i = 0
-    for row, col in zip(random_rows, random_cols):
-        feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
-        t.add_item(i, feature)
-        i += 1
-    
+    if (PCA_enabled):
+        X = np.zeros((num_samples, num_features * patch_size * patch_size))
+        
+        i = 0
+        for row, col in zip(random_rows, random_cols):
+            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+            # Add the feature to a matrix
+            X[i, :] = feature
+            i += 1
+
+        # Perform PCA on X
+        pca = PCA(n_components=num_PCA_features, svd_solver='full')
+        X_pca = pca.fit_transform(X)
+
+        # Add the PCA features to ANN
+        i = 0
+        for r in range(X_pca.shape[0]):
+            t.add_item(i, X_pca[r, :])
+            i += 1
+    else:
+        i = 0
+        for row, col in zip(random_rows, random_cols):
+            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+            t.add_item(i, feature)
+            i += 1
+
     t.build(TREE)
 
-    feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
+    if (PCA_enabled):
+        feature_q_temp = getFeatureAtQ(B_l, (q[0], q[1]))
+        feature_q = pca.transform(np.reshape(feature_q_temp, 
+                                            (1, num_features * patch_size * patch_size)))
+        feature_q = np.reshape(feature_q, (num_PCA_features,))
+    else:
+        feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
     
     neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
 
