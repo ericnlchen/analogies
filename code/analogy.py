@@ -8,7 +8,7 @@ from skimage import color
 from skimage import img_as_ubyte
 from tqdm import tqdm
 from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-
+from joblib import Parallel, delayed
 
 def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     '''
@@ -80,12 +80,13 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
             i += 1
         
         t.build(TREE)
+        T_FILE_NAME = 'test.ann'
+        t.save(T_FILE_NAME)
         
-        
-        
-        
-        
-        for q_row in tqdm(range(pyramid_B_prime[l].shape[0])):
+        def process_row(q_row):
+            p_list = []
+            u = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+            u.load(T_FILE_NAME)
             for q_col in range(pyramid_B_prime[l].shape[1]):
                 q = (q_row, q_col)
 
@@ -93,7 +94,24 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
                 #     print("Processing pixel at index {}".format(q))
                 
                 # Find the index p in A and A' which best matches index q in B and B'
-                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q, t, patch_size,random_rows,random_cols)
+                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, q, u, patch_size,random_rows,random_cols)
+                p_list.append(p)
+            return p_list
+        
+        with Parallel(n_jobs=8) as parallel:
+            p_row_col = parallel(delayed(process_row)(q_row) for q_row in range(pyramid_B_prime[l].shape[0]))
+        
+        
+        for q_row in tqdm(range(pyramid_B_prime[l].shape[0])):
+            for q_col in range(pyramid_B_prime[l].shape[1]):
+                q = (q_row, q_col)
+                p = p_row_col[q_row][q_col]
+
+                # if (show):
+                #     print("Processing pixel at index {}".format(q))
+                
+                # Find the index p in A and A' which best matches index q in B and B'
+                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, q, t, patch_size,random_rows,random_cols)
 
                 # Set the pixel in B' equal to the match we found
                 pyramid_B_prime[l][q[0], q[1]] = pyramid_A_prime[l][p[0], p[1]]
@@ -113,7 +131,8 @@ def createGaussianPyramid(img, level):
         gaus_pyramid.append(downsample_img)    
     return gaus_pyramid
 
-def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, random_cols):
+def bestMatch(A, A_prime, B, B_prime, s, q, t, patch_size, random_rows, random_cols):
+    l = 0
     A_l = A[l]
     B_l = B[l]
 
