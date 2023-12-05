@@ -139,7 +139,7 @@ if __name__ == '__main__':
     # A_prime = cv2.GaussianBlur(A, (15,15), 10)
     # plt.imshow(A_prime)
     # plt.show()
-    B = plt.imread('../data/s1.jpg')
+    B = plt.imread('../data/sky1.jpg')
     B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
     plt.imshow(B_prime)
     plt.show()

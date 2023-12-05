@@ -54,13 +54,13 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         
-        num_samples = 100 # 2000
-        patch_size = 5
-        A_l = A[l]
+        num_samples = 10000 # 2000
+        patch_size = 7
+        A_l = features_A[l]
         #B_l = B[l]
 
         # TREE is a tuning parameter
-        TREE = 10
+        TREE = 15
         _, width, num_features = A_l.shape
         
         t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
@@ -182,7 +182,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 5
+    patch_size = 7
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -231,7 +231,7 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 5
+    patch_size = 7
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
