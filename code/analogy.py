@@ -51,6 +51,36 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     # seik: why are we not doing for `l in range(num_levels) - 1, -1, -1` which means we're going from coarest to finest? 
     for l in range(num_levels):
         # For each pixel q at (q_row, q_col)...
+        
+        
+        
+        num_samples = 100 # 2000
+        patch_size = 5
+        A_l = A[l]
+        #B_l = B[l]
+
+        # TREE is a tuning parameter
+        TREE = 10
+        _, width, num_features = A_l.shape
+        
+        t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+
+        # Randomly sample pixel indices from A
+        random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
+        random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
+
+        i = 0
+        for row, col in zip(random_rows, random_cols):
+            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+            t.add_item(i, feature)
+            i += 1
+        
+        t.build(TREE)
+        
+        
+        
+        
+        
         for q_row in range(pyramid_B_prime[l].shape[0]):
             for q_col in range(pyramid_B_prime[l].shape[1]):
                 q = (q_row, q_col)
@@ -59,7 +89,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
                     print("Processing pixel at index {}".format(q))
                 
                 # Find the index p in A and A' which best matches index q in B and B'
-                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q)
+                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q, t, patch_size,random_rows,random_cols)
 
                 # Set the pixel in B' equal to the match we found
                 pyramid_B_prime[l][q[0], q[1]] = pyramid_A_prime[l][p[0], p[1]]
@@ -77,11 +107,11 @@ def createGaussianPyramid(img, level):
         gaus_pyramid.append(downsample_img)    
     return gaus_pyramid
 
-def bestMatch(A, A_prime, B, B_prime, s, l, q):
+def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, random_cols):
     A_l = A[l]
     B_l = B[l]
 
-    P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q)
+    P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_rows, random_cols)
     P_coh = bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q)
 
     if P_coh is None:
@@ -100,34 +130,34 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
         return P_app
 
 # Algorithm: using approximate nearest neighbor search
-def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
+def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_rows, random_cols):
     '''
     l is for level l
     q is the point inside image B
     '''
 
-    num_samples = 100 # 2000
-    patch_size = 5
-    A_l = A[l]
+    # num_samples = 100 # 2000
+    # patch_size = 5
+    # A_l = A[l]
     B_l = B[l]
 
-    # TREE is a tuning parameter
-    TREE = 10
-    _, width, num_features = A_l.shape
+    # # TREE is a tuning parameter
+    # TREE = 10
+    # _, width, num_features = A_l.shape
     
-    t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+    # t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
 
-    # Randomly sample pixel indices from A
-    random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
-    random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
+    # # Randomly sample pixel indices from A
+    # random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
+    # random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
 
-    i = 0
-    for row, col in zip(random_rows, random_cols):
-        feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
-        t.add_item(i, feature)
-        i += 1
+    # i = 0
+    # for row, col in zip(random_rows, random_cols):
+    #     feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+    #     t.add_item(i, feature)
+    #     i += 1
     
-    t.build(TREE)
+    # t.build(TREE)
 
     feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
     
