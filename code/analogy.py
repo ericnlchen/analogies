@@ -4,6 +4,9 @@ import numpy as np
 import pyrtools as pt # pip install pyrtools
 from annoy import AnnoyIndex # pip install annoy ; https://sds-aau.github.io/M3Port19/portfolio/ann/
 import colorsys
+from skimage import color
+from skimage import img_as_ubyte
+from tqdm import tqdm
 from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 
 
@@ -19,7 +22,8 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     num_levels = 1 # TODO: make this higher
 
     print("Initializing data structures...")
-
+    A = lumin_remap(A, B)
+    A_prime = lumin_remap(A_prime, B)
     # Create Gaussian pyramids
     pyramid_A = createGaussianPyramid(A, num_levels)
     pyramid_A_prime = createGaussianPyramid(A_prime, num_levels)
@@ -55,7 +59,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         num_samples = 10000 # 2000
-        patch_size = 7
+        patch_size = 5
         A_l = features_A[l]
         #B_l = B[l]
 
@@ -81,18 +85,20 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         
-        for q_row in range(pyramid_B_prime[l].shape[0]):
+        for q_row in tqdm(range(pyramid_B_prime[l].shape[0])):
             for q_col in range(pyramid_B_prime[l].shape[1]):
                 q = (q_row, q_col)
 
-                if (show):
-                    print("Processing pixel at index {}".format(q))
+                # if (show):
+                #     print("Processing pixel at index {}".format(q))
                 
                 # Find the index p in A and A' which best matches index q in B and B'
                 p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q, t, patch_size,random_rows,random_cols)
 
                 # Set the pixel in B' equal to the match we found
                 pyramid_B_prime[l][q[0], q[1]] = pyramid_A_prime[l][p[0], p[1]]
+                #todo: add B' and A'features for that specific pixel
+                
 
                 # Keep track of the mapping between p and q
                 s[l][q[0], q[1]] = p
@@ -122,7 +128,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 0.1
+    k = 0.8
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
@@ -182,7 +188,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 7
+    patch_size = 5
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -231,7 +237,7 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 7
+    patch_size = 5
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
@@ -285,6 +291,9 @@ def computeFeatures(pyramid):
     for l in range(num_levels):
         feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
         feature_pyramid[l][:, :, 1:] = computeSteerablePyramidResponse(pyramid[l])
+        
+        # feature_pyramid[l][:,:,13] = np.zeros((pyramid[l].shape[0], pyramid[l].shape[1]))
+        # feature_pyramid[l][:,:,14:] = np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], 12))
 
     return feature_pyramid
 
@@ -330,3 +339,44 @@ def edge_detection(image_path, low_threshold=100, high_threshold=200):
     edges = cv2.Canny(image, low_threshold, high_threshold)
     
     return edges
+
+def lumin_remap(Image_A, Image_B):
+    """
+    Apply luminance remapping from Image A to Image B and reapply the original colors.
+
+    Parameters:
+    - Image_A: The source image for which the luminance will be remapped.
+    - Image_B: The target image whose luminance distribution will be matched.
+
+    Returns:
+    - Image_A_remapped: The source image with its luminance remapped and original colors reapplied.
+    """
+    # Convert images to LAB color space to separate luminance (L channel) and color (A and B channels)
+    Image_A_LAB = color.rgb2lab(Image_A)
+    Image_B_LAB = color.rgb2lab(Image_B)
+    
+    # Extract the L channel for both images
+    L_A = Image_A_LAB[:, :, 0]
+    L_B = Image_B_LAB[:, :, 0]
+    
+    # Compute the mean and standard deviation of the L channel of both images
+    mu_A = np.mean(L_A)
+    mu_B = np.mean(L_B)
+    sigma_A = np.std(L_A)
+    sigma_B = np.std(L_B)
+    
+    # Remap the luminance of image A
+    L_A_prime = (sigma_B / sigma_A) * (L_A - mu_A) + mu_B
+    
+    # Clip values to be in the range [0, 100] for LAB L channel
+    L_A_prime = np.clip(L_A_prime, 0, 100)
+    
+    # Combine the remapped L channel with the original A and B color channels
+    Image_A_remapped_LAB = np.copy(Image_A_LAB)
+    Image_A_remapped_LAB[:, :, 0] = L_A_prime
+    
+    # Convert back to RGB color space
+    Image_A_remapped = color.lab2rgb(Image_A_remapped_LAB)
+    
+    return img_as_ubyte(Image_A_remapped)
+
