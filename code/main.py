@@ -134,12 +134,12 @@ from analogy import createImageAnalogy
 
 if __name__ == '__main__':
     
-    A = plt.imread('../data/r1.jpeg')
-    A_prime = plt.imread('../data/r2.jpeg')
+    A = plt.imread('../data/a1.jpg')
+    A_prime = plt.imread('../data/a2.jpg')
     # A_prime = cv2.GaussianBlur(A, (15,15), 10)
     # plt.imshow(A_prime)
     # plt.show()
-    B = plt.imread('../data/t1.jpeg')
+    B = plt.imread('../data/s1.jpg')
     B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
     plt.imshow(B_prime)
     plt.show()

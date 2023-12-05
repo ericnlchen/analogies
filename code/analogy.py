@@ -92,7 +92,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 0.7
+    k = 0.1
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
