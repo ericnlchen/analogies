@@ -58,8 +58,8 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         
-        num_samples = 10000 # 2000
-        patch_size = 5
+        num_samples = 100000 # 2000
+        patch_size = 6
         A_l = features_A[l]
         #B_l = B[l]
 
@@ -128,7 +128,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 0.8
+    k = 1
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
@@ -188,7 +188,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 5
+    patch_size = 6
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -237,7 +237,7 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 5
+    patch_size = 6
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
@@ -340,43 +340,23 @@ def edge_detection(image_path, low_threshold=100, high_threshold=200):
     
     return edges
 
-def lumin_remap(Image_A, Image_B):
+def lumin_remap(A, B):
     """
-    Apply luminance remapping from Image A to Image B and reapply the original colors.
-
-    Parameters:
-    - Image_A: The source image for which the luminance will be remapped.
-    - Image_B: The target image whose luminance distribution will be matched.
-
-    Returns:
-    - Image_A_remapped: The source image with its luminance remapped and original colors reapplied.
+    Implement luminance remapping 
     """
-    # Convert images to LAB color space to separate luminance (L channel) and color (A and B channels)
-    Image_A_LAB = color.rgb2lab(Image_A)
-    Image_B_LAB = color.rgb2lab(Image_B)
+    lab_A = color.rgb2lab(A)
+    lab_B = color.rgb2lab(B)
+    lu_A = lab_A[:, :, 0]
+    lu_B = lab_B[:, :, 0]
+    mu_A = np.mean(lu_A)
+    mu_B = np.mean(lu_B)
+    sigma_A = np.std(lu_A)
+    sigma_B = np.std(lu_B)
+    yp = (sigma_B/sigma_A) * (lu_A - mu_A) + mu_B
+    yp = np.clip(yp, 0, 100)
+    Image_A = np.copy(lab_A)
+    Image_A[:, :, 0] = yp
+    rgbA = color.lab2rgb(Image_A)
     
-    # Extract the L channel for both images
-    L_A = Image_A_LAB[:, :, 0]
-    L_B = Image_B_LAB[:, :, 0]
-    
-    # Compute the mean and standard deviation of the L channel of both images
-    mu_A = np.mean(L_A)
-    mu_B = np.mean(L_B)
-    sigma_A = np.std(L_A)
-    sigma_B = np.std(L_B)
-    
-    # Remap the luminance of image A
-    L_A_prime = (sigma_B / sigma_A) * (L_A - mu_A) + mu_B
-    
-    # Clip values to be in the range [0, 100] for LAB L channel
-    L_A_prime = np.clip(L_A_prime, 0, 100)
-    
-    # Combine the remapped L channel with the original A and B color channels
-    Image_A_remapped_LAB = np.copy(Image_A_LAB)
-    Image_A_remapped_LAB[:, :, 0] = L_A_prime
-    
-    # Convert back to RGB color space
-    Image_A_remapped = color.lab2rgb(Image_A_remapped_LAB)
-    
-    return img_as_ubyte(Image_A_remapped)
+    return img_as_ubyte(rgbA)
 
