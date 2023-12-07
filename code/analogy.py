@@ -59,7 +59,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         num_samples = 100000 # 2000
-        patch_size = 6
+        patch_size = 5
         A_l = features_A[l]
         #B_l = B[l]
 
@@ -128,7 +128,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 1
+    k = 0.1
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
@@ -188,7 +188,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 6
+    patch_size = 5
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -237,7 +237,7 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 6
+    patch_size = 5
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
