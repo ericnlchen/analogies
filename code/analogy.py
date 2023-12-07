@@ -4,6 +4,9 @@ import numpy as np
 import pyrtools as pt # pip install pyrtools
 from annoy import AnnoyIndex # pip install annoy ; https://sds-aau.github.io/M3Port19/portfolio/ann/
 import colorsys
+from skimage import color
+from skimage import img_as_ubyte
+from tqdm import tqdm
 from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 
 
@@ -19,7 +22,8 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     num_levels = 1 # TODO: make this higher
 
     print("Initializing data structures...")
-
+    A = lumin_remap(A, B)
+    A_prime = lumin_remap(A_prime, B)
     # Create Gaussian pyramids
     pyramid_A = createGaussianPyramid(A, num_levels)
     pyramid_A_prime = createGaussianPyramid(A_prime, num_levels)
@@ -51,18 +55,50 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     # seik: why are we not doing for `l in range(num_levels) - 1, -1, -1` which means we're going from coarest to finest? 
     for l in range(num_levels):
         # For each pixel q at (q_row, q_col)...
-        for q_row in range(pyramid_B_prime[l].shape[0]):
+        
+        
+        
+        num_samples = 100000 # 2000
+        patch_size = 6
+        A_l = features_A[l]
+        #B_l = B[l]
+
+        # TREE is a tuning parameter
+        TREE = 15
+        _, width, num_features = A_l.shape
+        
+        t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+
+        # Randomly sample pixel indices from A
+        random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
+        random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
+
+        i = 0
+        for row, col in zip(random_rows, random_cols):
+            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+            t.add_item(i, feature)
+            i += 1
+        
+        t.build(TREE)
+        
+        
+        
+        
+        
+        for q_row in tqdm(range(pyramid_B_prime[l].shape[0])):
             for q_col in range(pyramid_B_prime[l].shape[1]):
                 q = (q_row, q_col)
 
-                if (show):
-                    print("Processing pixel at index {}".format(q))
+                # if (show):
+                #     print("Processing pixel at index {}".format(q))
                 
                 # Find the index p in A and A' which best matches index q in B and B'
-                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q)
+                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q, t, patch_size,random_rows,random_cols)
 
                 # Set the pixel in B' equal to the match we found
                 pyramid_B_prime[l][q[0], q[1]] = pyramid_A_prime[l][p[0], p[1]]
+                #todo: add B' and A'features for that specific pixel
+                
 
                 # Keep track of the mapping between p and q
                 s[l][q[0], q[1]] = p
@@ -77,11 +113,11 @@ def createGaussianPyramid(img, level):
         gaus_pyramid.append(downsample_img)    
     return gaus_pyramid
 
-def bestMatch(A, A_prime, B, B_prime, s, l, q):
+def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, random_cols):
     A_l = A[l]
     B_l = B[l]
 
-    P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q)
+    P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_rows, random_cols)
     P_coh = bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q)
 
     if P_coh is None:
@@ -92,7 +128,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 0.7
+    k = 1
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
@@ -100,58 +136,33 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q):
         return P_app
 
 # Algorithm: using approximate nearest neighbor search
-def bestApproximateMatch(A, A_prime, B, B_prime, l, q):
+def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_rows, random_cols):
     '''
     l is for level l
     q is the point inside image B
     '''
 
-    num_samples = 100 # 2000
-    patch_size = 5
-    A_l = A[l]
+    # num_samples = 100 # 2000
+    # patch_size = 5
+    # A_l = A[l]
     B_l = B[l]
 
-    # TREE is a tuning parameter
-    TREE = 10
-    _, width, num_features = A_l.shape
-    num_PCA_features = 5
-    PCA_enabled = False
+    # # TREE is a tuning parameter
+    # TREE = 10
+    # _, width, num_features = A_l.shape
     
-    if (PCA_enabled):
-        t = AnnoyIndex(num_PCA_features, 'euclidean')
-    else:
-        t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+    # t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
 
-    # Randomly sample pixel indices from A
-    random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
-    random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
+    # # Randomly sample pixel indices from A
+    # random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
+    # random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
 
-    if (PCA_enabled):
-        X = np.zeros((num_samples, num_features * patch_size * patch_size))
-        
-        i = 0
-        for row, col in zip(random_rows, random_cols):
-            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
-            # Add the feature to a matrix
-            X[i, :] = feature
-            i += 1
-
-        # Perform PCA on X
-        pca = PCA(n_components=num_PCA_features, svd_solver='full')
-        X_pca = pca.fit_transform(X)
-
-        # Add the PCA features to ANN
-        i = 0
-        for r in range(X_pca.shape[0]):
-            t.add_item(i, X_pca[r, :])
-            i += 1
-    else:
-        i = 0
-        for row, col in zip(random_rows, random_cols):
-            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
-            t.add_item(i, feature)
-            i += 1
-
+    i = 0
+    for row, col in zip(random_rows, random_cols):
+        feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+        t.add_item(i, feature)
+        i += 1
+    
     t.build(TREE)
 
     if (PCA_enabled):
@@ -183,7 +194,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 5
+    patch_size = 6
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -232,7 +243,7 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 5
+    patch_size = 6
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
@@ -286,6 +297,9 @@ def computeFeatures(pyramid):
     for l in range(num_levels):
         feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
         feature_pyramid[l][:, :, 1:] = computeSteerablePyramidResponse(pyramid[l])
+        
+        # feature_pyramid[l][:,:,13] = np.zeros((pyramid[l].shape[0], pyramid[l].shape[1]))
+        # feature_pyramid[l][:,:,14:] = np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], 12))
 
     return feature_pyramid
 
@@ -331,3 +345,24 @@ def edge_detection(image_path, low_threshold=100, high_threshold=200):
     edges = cv2.Canny(image, low_threshold, high_threshold)
     
     return edges
+
+def lumin_remap(A, B):
+    """
+    Implement luminance remapping 
+    """
+    lab_A = color.rgb2lab(A)
+    lab_B = color.rgb2lab(B)
+    lu_A = lab_A[:, :, 0]
+    lu_B = lab_B[:, :, 0]
+    mu_A = np.mean(lu_A)
+    mu_B = np.mean(lu_B)
+    sigma_A = np.std(lu_A)
+    sigma_B = np.std(lu_B)
+    yp = (sigma_B/sigma_A) * (lu_A - mu_A) + mu_B
+    yp = np.clip(yp, 0, 100)
+    Image_A = np.copy(lab_A)
+    Image_A[:, :, 0] = yp
+    rgbA = color.lab2rgb(Image_A)
+    
+    return img_as_ubyte(rgbA)
+

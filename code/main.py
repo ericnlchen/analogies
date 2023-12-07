@@ -180,6 +180,8 @@ def create_video(frames_dir, output_video_path, fps):
 
 if __name__ == '__main__':
     
+    A = plt.imread('../data/cla1.jpg')
+    A_prime = plt.imread('../data/cla2.jpg')
     # A = plt.imread('../data/r1.jpeg')
     # A_prime = plt.imread('../data/r2.jpeg')
     # A_prime = cv2.GaussianBlur(A, (15,15), 10)
