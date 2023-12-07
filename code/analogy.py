@@ -157,21 +157,15 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_row
     # random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
     # random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
 
-    i = 0
-    for row, col in zip(random_rows, random_cols):
-        feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
-        t.add_item(i, feature)
-        i += 1
+    # i = 0
+    # for row, col in zip(random_rows, random_cols):
+    #     feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+    #     t.add_item(i, feature)
+    #     i += 1
     
-    t.build(TREE)
+    # t.build(TREE)
 
-    if (PCA_enabled):
-        feature_q_temp = getFeatureAtQ(B_l, (q[0], q[1]))
-        feature_q = pca.transform(np.reshape(feature_q_temp, 
-                                            (1, num_features * patch_size * patch_size)))
-        feature_q = np.reshape(feature_q, (num_PCA_features,))
-    else:
-        feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
+    feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
     
     neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
 
@@ -365,4 +359,3 @@ def lumin_remap(A, B):
     rgbA = color.lab2rgb(Image_A)
     
     return img_as_ubyte(rgbA)
-
