@@ -130,17 +130,100 @@ def transfer(args):
 
 import matplotlib.pyplot as plt
 import cv2
-from analogy import createImageAnalogy
+# from analogy import createImageAnalogy
+import os
+
+def extract_frames(video_path, frames_dir):
+    """
+    Extracts frames from a video file and saves them as images.
+    """
+    if not os.path.exists(video_path):
+        print(f"Error: Video file not found at {video_path}")
+        return 0
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print("Error: Failed to open video file.")
+        return 0
+
+    frame_count = 0
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame_path = os.path.join(frames_dir, f"frame{frame_count:06d}.jpg")
+        cv2.imwrite(frame_path, frame)
+        frame_count += 1
+
+    cap.release()
+    return frame_count
+
+
+def create_video(frames_dir, output_video_path, fps):
+    """
+    Creates a video from a series of frames.
+    reference: https://www.youtube.com/watch?v=ZcqodhMuv4o
+    """
+    frame_files = sorted([os.path.join(frames_dir, f) for f in os.listdir(frames_dir) if f.endswith('.jpg')])
+    if not frame_files:
+        return
+
+    frame = cv2.imread(frame_files[0])
+    height, width, _ = frame.shape
+    cv2_fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video = cv2.VideoWriter(output_video_path, cv2_fourcc, fps, (width, height))
+
+    for frame_file in frame_files:
+        video.write(cv2.imread(frame_file))
+
+    video.release()
 
 if __name__ == '__main__':
     
-    A = plt.imread('../data/r1.jpeg')
-    A_prime = plt.imread('../data/r2.jpeg')
+    # A = plt.imread('../data/r1.jpeg')
+    # A_prime = plt.imread('../data/r2.jpeg')
     # A_prime = cv2.GaussianBlur(A, (15,15), 10)
     # plt.imshow(A_prime)
     # plt.show()
-    B = plt.imread('../data/t1.jpeg')
-    B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
-    plt.imshow(B_prime)
-    plt.show()
-    plt.imsave("../results/output.jpg", B_prime)
+    # B = plt.imread('../data/t1.jpeg')
+    # B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
+    # plt.imshow(B_prime)
+    # plt.show()
+    # plt.imsave("../results/output.jpg", B_prime)
+
+
+    video_path = './data/my_video.mp4'
+    frames_dir = './data/frames'
+    modified_frames_dir = './data/modified_frames'
+    results_dir = './results'  # Directory for results
+    output_video_path = os.path.join(results_dir, 'output_video.mp4')
+    
+    # # Read the reference images for analogy
+    # A = plt.imread('./data/r1.jpeg')
+    # A_prime = plt.imread('./data/r2.jpeg')
+
+
+    # Ensure directories exist
+    # ChatGPT used for some debugging for the try-except exception handling
+    try:
+        os.makedirs(frames_dir, exist_ok=True)
+        os.makedirs(modified_frames_dir, exist_ok=True)
+        os.makedirs(results_dir, exist_ok=True)
+    except Exception as e:
+        print(f"Error creating directories: {e}")
+        exit(1)
+
+    # Extract frames from the video
+    if extract_frames(video_path, frames_dir) == 0:
+        exit(1)
+    
+    for frame_file in sorted(os.listdir(frames_dir)):
+        frame_path = os.path.join(frames_dir, frame_file)
+        modified_frame_path = os.path.join(modified_frames_dir, frame_file)
+        
+        # B = plt.imread(frame_path)
+        # B_prime = createImageAnalogy(A, A_prime, B, show=False, seed_val=0)
+        # plt.imsave(modified_frame_path, B_prime)
+
+    # Create a video from the modified frames
+    create_video(frames_dir, output_video_path, fps=30)  # Adjust FPS as needed
