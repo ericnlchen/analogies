@@ -191,7 +191,7 @@ if __name__ == '__main__':
     # plt.show()
     # plt.imsave("../results/output.jpg", B_prime)
 
-
+    # current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
     video_path = './data/my_video.mp4'
     frames_dir = './data/frames'
     modified_frames_dir = './data/modified_frames'
