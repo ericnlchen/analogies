@@ -200,24 +200,24 @@ def create_video(frames_dir, output_video_path, fps):
 
 if __name__ == '__main__':
     
-    # A = plt.imread('../data/orange.jpg')
-    # A_prime = plt.imread('../data/orange.jpg')
-    # B = plt.imread('../data/orange.jpg')
+    # A = plt.imread('./data/newflower-src.jpg')
+    # A_prime = plt.imread('./data/newflower-blur.jpg')
+    # B = plt.imread('./data/toy-newshore-src.jpg')
     # B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
     # plt.imshow(B_prime)
     # plt.show()
     # plt.imsave("../results/output.jpg", B_prime)
 
     #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
-    video_path = '../data/sheepv.mp4'
-    frames_dir = '../data/frames'
-    modified_frames_dir = '../data/modified_frames'
-    results_dir = '../results'  # Directory for results
+    video_path = './data/videoB.mp4'
+    frames_dir = './data/frames'
+    modified_frames_dir = './data/modified_frames'
+    results_dir = './results'  # Directory for results
     output_video_path = os.path.join(results_dir, 'output_video.mp4')
     
     # Read the reference images for analogy
-    A = plt.imread('../data/a1.jpg')
-    A_prime = plt.imread('../data/a2.jpg')
+    A = plt.imread('./data/video_a_image.jpg')
+    A_prime = plt.imread('./data/video_a_prime_image.jpg')
 
 
     #Ensure directories exist
@@ -244,4 +244,4 @@ if __name__ == '__main__':
         plt.imsave(modified_frame_path, B_prime)
 
     # Create a video from the modified frames
-    create_video(modified_frames_dir, output_video_path, fps)  # Adjust FPS as needed
+    create_video(modified_frames_dir, output_video_path, fps)
