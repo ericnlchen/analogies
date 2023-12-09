@@ -158,7 +158,7 @@ def extract_frames(video_path, frames_dir):
         
         
         height, width = frame.shape[:2]
-        new_height = 200
+        new_height = 300
 
         
         scaling_factor = new_height / height
@@ -209,7 +209,7 @@ if __name__ == '__main__':
     # plt.imsave("../results/output.jpg", B_prime)
 
     #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
-    video_path = '../data/sheepv.mp4'
+    video_path = '../data/sun.MOV'
     frames_dir = '../data/frames'
     modified_frames_dir = '../data/modified_frames'
     results_dir = '../results'  # Directory for results
