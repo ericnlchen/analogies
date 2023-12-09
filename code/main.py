@@ -158,7 +158,7 @@ def extract_frames(video_path, frames_dir):
         
         
         height, width = frame.shape[:2]
-        new_height = 200
+        new_height = 480
 
         
         scaling_factor = new_height / height
@@ -197,6 +197,29 @@ def create_video(frames_dir, output_video_path, fps):
         video.write(cv2.imread(frame_file))
 
     video.release()
+    
+
+def create_video_from_selected_frames(frames_dir, modified_frames_dir, output_video_path, fps):
+    """
+    Creates a video from a series of selected frames.
+    """
+    all_frame_files = sorted(os.listdir(frames_dir))
+    modified_frame_files = set(os.listdir(modified_frames_dir))
+
+    frame_files = [f for f in all_frame_files if f in modified_frame_files]
+    if not frame_files:
+        return
+
+    frame = cv2.imread(os.path.join(frames_dir, frame_files[0]))
+    height, width, _ = frame.shape
+    cv2_fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    video = cv2.VideoWriter(output_video_path, cv2_fourcc, fps, (width, height))
+
+    for frame_file in frame_files:
+        video.write(cv2.imread(os.path.join(modified_frames_dir, frame_file)))
+
+    video.release()
+    
 
 if __name__ == '__main__':
     
@@ -209,15 +232,15 @@ if __name__ == '__main__':
     # plt.imsave("../results/output.jpg", B_prime)
 
     #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
-    video_path = './data/videoB.mp4'
+    video_path = './data/seaside_28sec_blackwhite.mp4'
     frames_dir = './data/frames'
     modified_frames_dir = './data/modified_frames'
     results_dir = './results'  # Directory for results
     output_video_path = os.path.join(results_dir, 'output_video.mp4')
     
     # Read the reference images for analogy
-    A = plt.imread('./data/video_a_image.jpg')
-    A_prime = plt.imread('./data/video_a_prime_image.jpg')
+    A = plt.imread('./data/imageA.png')
+    A_prime = plt.imread('./data/imageA_prime.png')
 
 
     #Ensure directories exist
@@ -235,7 +258,10 @@ if __name__ == '__main__':
     if count == 0:
         exit(1)
     
-    for frame_file in tqdm(sorted(os.listdir(frames_dir))):
+# Process only every n-th frame
+n = 7
+for frame_number, frame_file in tqdm(enumerate(sorted(os.listdir(frames_dir)))):
+    if frame_number % n == 0:  # Process only if frame number is a multiple of 12
         frame_path = os.path.join(frames_dir, frame_file)
         modified_frame_path = os.path.join(modified_frames_dir, frame_file)
         
@@ -244,4 +270,5 @@ if __name__ == '__main__':
         plt.imsave(modified_frame_path, B_prime)
 
     # Create a video from the modified frames
-    create_video(modified_frames_dir, output_video_path, fps)
+    # create_video(modified_frames_dir, output_video_path, fps)
+    create_video_from_selected_frames(frames_dir, modified_frames_dir, output_video_path, fps)
