@@ -232,15 +232,15 @@ if __name__ == '__main__':
     # plt.imsave("../results/output.jpg", B_prime)
 
     #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
-    video_path = './data/seaside_28sec_blackwhite.mp4'
+    video_path = './data/winnie the pooh_trimmed2.mp4'
     frames_dir = './data/frames'
     modified_frames_dir = './data/modified_frames'
     results_dir = './results'  # Directory for results
     output_video_path = os.path.join(results_dir, 'output_video.mp4')
     
     # Read the reference images for analogy
-    A = plt.imread('./data/imageA.png')
-    A_prime = plt.imread('./data/imageA_prime.png')
+    A = plt.imread('./data/sketchA.jpeg')
+    A_prime = plt.imread('./data/sketchA_prime.jpeg')
 
 
     #Ensure directories exist
@@ -258,10 +258,22 @@ if __name__ == '__main__':
     if count == 0:
         exit(1)
     
-# Process only every n-th frame
-n = 7
-for frame_number, frame_file in tqdm(enumerate(sorted(os.listdir(frames_dir)))):
-    if frame_number % n == 0:  # Process only if frame number is a multiple of 12
+# # Process only every n-th frame
+# n = 7
+# for frame_number, frame_file in tqdm(enumerate(sorted(os.listdir(frames_dir)))):
+#     if frame_number % n == 0:  # Process only if frame number is a multiple of 12
+#         frame_path = os.path.join(frames_dir, frame_file)
+#         modified_frame_path = os.path.join(modified_frames_dir, frame_file)
+        
+#         B = plt.imread(frame_path)
+#         B_prime = createImageAnalogy(A, A_prime, B, show=False, seed_val=0)
+#         plt.imsave(modified_frame_path, B_prime)
+
+#     # Create a video from the modified frames
+#     create_video_from_selected_frames(frames_dir, modified_frames_dir, output_video_path, fps)
+
+    
+    for frame_file in tqdm(sorted(os.listdir(frames_dir))):
         frame_path = os.path.join(frames_dir, frame_file)
         modified_frame_path = os.path.join(modified_frames_dir, frame_file)
         
@@ -270,5 +282,4 @@ for frame_number, frame_file in tqdm(enumerate(sorted(os.listdir(frames_dir)))):
         plt.imsave(modified_frame_path, B_prime)
 
     # Create a video from the modified frames
-    # create_video(modified_frames_dir, output_video_path, fps)
-    create_video_from_selected_frames(frames_dir, modified_frames_dir, output_video_path, fps)
+    create_video(modified_frames_dir, output_video_path, fps)  # Adjust FPS as needed
