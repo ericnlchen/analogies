@@ -59,7 +59,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         num_samples = 40000 # 2000
-        patch_size = 7
+        patch_size = 5
         A_l = features_A[l]
         #B_l = B[l]
 
@@ -207,7 +207,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 1.2
+    k = 1
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
@@ -271,7 +271,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 7
+    patch_size = 5
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -320,15 +320,16 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 7
+    patch_size = 5
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
     max_col = clamp(q[1] + patch_size//2, 0, B_prime_l.shape[1] - 1)
 
-    r_star = None
-    smallest_dist = np.inf
+    # r_star = None
+    # smallest_dist = np.inf
     
+    r_to_distance = {}
     for r_row in range(min_row, max_row + 1):
         for r_col in range(min_col, max_col + 1):
             if (r_row < q[0] or (r_row == q[0] and r_col < q[1])):
@@ -339,9 +340,20 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
                     continue
                 F_q = getFeatureAtQ(B_l, q)
                 distance = np.linalg.norm(F_s_r - F_q)
-                if distance < smallest_dist:
-                    r_star = (r_row, r_col)
-                    smallest_dist = distance
+                # if distance < smallest_dist:
+                #     r_star = (r_row, r_col)
+                #     smallest_dist = distance
+                    
+                r_to_distance[(r_row, r_col)] = distance
+    r_to_distance = sorted(r_to_distance.items(), key=lambda x: x[1])
+    candidates = r_to_distance[:10]
+    if len(candidates) == 0:
+        return None
+    random_index = np.random.randint(0, len(candidates))
+    candidate = candidates[random_index]
+    candidate_r_row = candidate[0][0]
+    candidate_r_col = candidate[0][1]
+    r_star = (candidate_r_row, candidate_r_col)
     if r_star == None:
         return None
     else:
