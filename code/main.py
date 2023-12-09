@@ -200,16 +200,16 @@ def create_video(frames_dir, output_video_path, fps):
 
 if __name__ == '__main__':
     
-    # A = plt.imread('../data/orange.jpg')
-    # A_prime = plt.imread('../data/orange.jpg')
-    # B = plt.imread('../data/orange.jpg')
-    # B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
+    A = plt.imread('../data/eld1.jpg')
+    A_prime = plt.imread('../data/eld2.jpg')
+    B = plt.imread('../data/shore.jpg')
+    B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
     # plt.imshow(B_prime)
     # plt.show()
-    # plt.imsave("../results/output.jpg", B_prime)
+    plt.imsave("../results/output.jpg", B_prime)
 
     #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
-    video_path = '../data/sun.MOV'
+    video_path = '../data/captain.MOV'
     frames_dir = '../data/frames'
     modified_frames_dir = '../data/modified_frames'
     results_dir = '../results'  # Directory for results

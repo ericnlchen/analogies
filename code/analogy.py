@@ -125,17 +125,52 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         # # new_B = new_B / (1 + new_B)
         # new_B = np.clip(new_B, 0, 255)/255.0
         
+        def chrominance_scaling(lum, chrom, scale=0.38):
+        # Scale factor should be in the range [0, 1], where 0 is no scaling and 1 is full scaling
+            scaled_chrom = 1 + (chrom - 1) * (np.clip(lum / (scale * 255), 0, 1))
+            return scaled_chrom
         
-        
-        lum_threshold = 0.05 * 255  # Adjust this threshold as needed
+        lum_threshold = 0.25 * 255  # Adjust this threshold as needed
 
         # Blend chrominance in low-luminance areas with neutral chrominance
-        B_chrom_r = np.where(B_lum < lum_threshold, 1, B_chrom_r)
-        B_chrom_g = np.where(B_lum < lum_threshold, 1, B_chrom_g)
-        B_chrom_b = np.where(B_lum < lum_threshold, 1, B_chrom_b)
+        
+        # B_chrom_r = np.where(B_lum < lum_threshold, B_chrom_r/(1/(B_lum*13)+1), B_chrom_r)
+        # B_chrom_g = np.where(B_lum < lum_threshold, B_chrom_g/(1/(B_lum*13)+1), B_chrom_g)
+        # B_chrom_b = np.where(B_lum < lum_threshold, B_chrom_b/(1/(B_lum*13)+1), B_chrom_b)
+        
+        B_chrom_r = chrominance_scaling(B_lum, B_chrom_r)
+        B_chrom_g = chrominance_scaling(B_lum, B_chrom_g)
+        B_chrom_b = chrominance_scaling(B_lum, B_chrom_b)
+        
+        
+        
+        
+        
+        
+        def sigmoid_scaling(lum, chrom, scale=5, offset=0.5):
+        # Sigmoid function for scaling
+        # 'scale' adjusts the steepness of the sigmoid curve
+        # 'offset' shifts the midpoint of the sigmoid curve
+            sigmoid_factor = 1 / (1 + np.exp(-scale * (lum / 255 - offset)))
+            return 1 + (chrom - 1) * sigmoid_factor
+
+        # Apply sigmoid scaling to chrominance channels
+        # B_chrom_r = sigmoid_scaling(B_lum, B_chrom_r)
+        # B_chrom_g = sigmoid_scaling(B_lum, B_chrom_g)
+        # B_chrom_b = sigmoid_scaling(B_lum, B_chrom_b)
+
+        
+        
+        
+        
+        
+        
+        # lum = np.where(B_lum < lum_threshold, B_lum, B_P_lum)
 
         B_chrom = np.stack([B_chrom_r, B_chrom_g, B_chrom_b], axis=-1)
         new_B = np.stack([B_P_lum]*3, axis=-1) * B_chrom
+        # plt.imshow(B)
+        # plt.show()
         new_B = np.clip(new_B, 0, 255) / 255.0
         
         
@@ -172,7 +207,7 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 0.3
+    k = 1
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
