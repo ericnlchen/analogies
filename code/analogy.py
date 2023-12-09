@@ -102,8 +102,52 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
 
                 # Keep track of the mapping between p and q
                 s[l][q[0], q[1]] = p
+        B_P = pyramid_B_prime[0]
+        B_P_lum = cv2.cvtColor(B_P, cv2.COLOR_BGR2GRAY)
+        # plt.imshow(B_P_lum, cmap='gray')
+        # plt.show()
+        B_lum = cv2.cvtColor(B, cv2.COLOR_BGR2GRAY)
+        B_r = B[:, :, 0]
+        B_g = B[:, :, 1]
+        B_b = B[:, :, 2]
+        epsilon = 1e-5
+        B_chrom_r = B_r / (B_lum+epsilon)
+        B_chrom_g = B_g / (B_lum+epsilon)
+        B_chrom_b = B_b / (B_lum+epsilon)
+        # print("start B_P_lum: ", np.min(B_P_lum))
+        # print("B_P", np.max(B_P_lum))
+        # print("B_chrom_r", np.min(B_chrom_r))
+        # print("B_chrom_r", np.max(B_chrom_r))
+        
+        # B_chrom = np.stack([B_chrom_r, B_chrom_g, B_chrom_b], axis=-1)
+        # new_B = np.stack([B_P_lum]*3, axis=-1) * B_chrom
+        # # new_B = new_B/255.0
+        # # new_B = new_B / (1 + new_B)
+        # new_B = np.clip(new_B, 0, 255)/255.0
+        
+        
+        
+        lum_threshold = 0.05 * 255  # Adjust this threshold as needed
 
-    return pyramid_B_prime[0]
+        # Blend chrominance in low-luminance areas with neutral chrominance
+        B_chrom_r = np.where(B_lum < lum_threshold, 1, B_chrom_r)
+        B_chrom_g = np.where(B_lum < lum_threshold, 1, B_chrom_g)
+        B_chrom_b = np.where(B_lum < lum_threshold, 1, B_chrom_b)
+
+        B_chrom = np.stack([B_chrom_r, B_chrom_g, B_chrom_b], axis=-1)
+        new_B = np.stack([B_P_lum]*3, axis=-1) * B_chrom
+        new_B = np.clip(new_B, 0, 255) / 255.0
+        
+        
+        
+        # plt.imshow(cv2.cvtColor(new_B.astype(np.float32),cv2.COLOR_BGR2GRAY), cmap='gray')
+        # #plt.imshow(new_B)
+        # plt.show()
+        print("B_newmin", np.min(new_B))
+        print("B_newmax", np.max(new_B))
+
+    return new_B
+    #return pyramid_B_prime[0]
 
 def createGaussianPyramid(img, level):
     gaus_pyramid = [img]

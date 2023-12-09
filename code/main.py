@@ -158,7 +158,7 @@ def extract_frames(video_path, frames_dir):
         
         
         height, width = frame.shape[:2]
-        new_height = 300
+        new_height = 480
 
         
         scaling_factor = new_height / height
