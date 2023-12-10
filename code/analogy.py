@@ -8,13 +8,19 @@ from skimage import color
 from skimage import img_as_ubyte
 from tqdm import tqdm
 from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
-
+def createVideoAnalogy(A, A_prime, B, B_prime, show=False, seed_val=None):
+    '''
+    Given Videos A and A prime and B, returns the video B_prime using
+    analogies on video volumes.
+    '''
+    
 
 def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     '''
     Given images A, A_prime and B, returns the image B_prime using
     analogies.
     '''
+    print("A shape", A.shape)
     if (seed_val is not None):
         np.random.seed(seed_val)
 
@@ -23,11 +29,12 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
 
     print("Initializing data structures...")
     A = lumin_remap(A, B)
+    
     A_prime = lumin_remap(A_prime, B)
     # Create Gaussian pyramids
-    pyramid_A = createGaussianPyramid(A, num_levels)
-    pyramid_A_prime = createGaussianPyramid(A_prime, num_levels)
-    pyramid_B = createGaussianPyramid(B, num_levels)
+    pyramid_A = [A]
+    pyramid_A_prime = [A_prime]
+    pyramid_B = [B]
     pyramid_B_prime = [np.zeros_like(pyramid_B[l]) for l in range(num_levels)]
 
     # Get features for each level of Gaussian pyramids
@@ -40,7 +47,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
     #   mappings that we find at each level.
     #   It will be the same shape as B' but instead of storing colors it will
     #   store the pixel indices where those colors came from in A'
-    s = [np.zeros((pyramid_B_prime[l].shape[0], pyramid_B_prime[l].shape[1]), dtype=object) for l in range(num_levels)]
+    s = [np.zeros((pyramid_B_prime[l].shape[0], pyramid_B_prime[l].shape[1], pyramid_B_prime[l].shape[2]), dtype=object) for l in range(num_levels)]
 
     '''
     NOTE: After this point, an image (A, B, etc) can be indexed as follows:
@@ -59,49 +66,50 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         num_samples = 40000 # 2000
-        patch_size = 7
+        patch_size = 5
         A_l = features_A[l]
         #B_l = B[l]
 
         # TREE is a tuning parameter
         TREE = 15
-        _, width, num_features = A_l.shape
+        num_features = A_l.shape[3]
         
-        t = AnnoyIndex(num_features * patch_size * patch_size, 'euclidean')
+        t = AnnoyIndex(num_features * patch_size * patch_size * patch_size, 'euclidean')
 
         # Randomly sample pixel indices from A
-        random_rows = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
-        random_cols = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
+        random_frames = np.random.randint(0, A_l.shape[0] - patch_size, size=num_samples)
+        print("A_l shape",A_l.shape[1] - patch_size)
+        random_rows = np.random.randint(0, A_l.shape[1] - patch_size, size=num_samples)
+        random_cols = np.random.randint(0, A_l.shape[2] - patch_size, size=num_samples)
 
         i = 0
-        for row, col in zip(random_rows, random_cols):
-            feature = getFeatureAtQ(A_l, (row + patch_size//2, col + patch_size//2))
+        for frame, row, col in zip(random_frames, random_rows, random_cols):
+            feature = getFeatureAtQ(A_l, (frame + patch_size//2, row + patch_size//2, col + patch_size//2))
             t.add_item(i, feature)
             i += 1
         
         t.build(TREE)
         
         
-        
-        
-        
-        for q_row in tqdm(range(pyramid_B_prime[l].shape[0])):
-            for q_col in range(pyramid_B_prime[l].shape[1]):
-                q = (q_row, q_col)
+        for q_frame in tqdm(range(pyramid_B_prime[l].shape[0])):
+            for q_row in tqdm(range(pyramid_B_prime[l].shape[1])):
+                for q_col in range(pyramid_B_prime[l].shape[2]):
+                    q = (q_frame, q_row, q_col)
 
-                # if (show):
-                #     print("Processing pixel at index {}".format(q))
-                
-                # Find the index p in A and A' which best matches index q in B and B'
-                p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q, t, patch_size,random_rows,random_cols)
+                    # if (show):
+                    #     print("Processing pixel at index {}".format(q))
+                    
+                    # Find the index p in A and A' which best matches index q in B and B'
+                    p = bestMatch(features_A, features_A_prime, features_B, pyramid_B_prime, s, l, q, t, patch_size,random_frames,random_rows,random_cols)
 
-                # Set the pixel in B' equal to the match we found
-                pyramid_B_prime[l][q[0], q[1]] = pyramid_A_prime[l][p[0], p[1]]
-                #todo: add B' and A'features for that specific pixel
-                
+                    # Set the pixel in B' equal to the match we found
+                    pyramid_B_prime[l][q[0], q[1], q[2]] = pyramid_A_prime[l][p[0], p[1], p[2]]
+                    #todo: add B' and A'features for that specific pixel
+                    
 
-                # Keep track of the mapping between p and q
-                s[l][q[0], q[1]] = p
+                    # Keep track of the mapping between p and q
+                    s[l][q[0], q[1], q[2]] = p
+                    
         B_P = pyramid_B_prime[0]
         B_P_lum = cv2.cvtColor(B_P, cv2.COLOR_BGR2GRAY)
         # plt.imshow(B_P_lum, cmap='gray')
@@ -192,11 +200,11 @@ def createGaussianPyramid(img, level):
         gaus_pyramid.append(downsample_img)    
     return gaus_pyramid
 
-def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, random_cols):
+def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_frames, random_rows, random_cols):
     A_l = A[l]
     B_l = B[l]
 
-    P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_rows, random_cols)
+    P_app = bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_frames, random_rows, random_cols)
     P_coh = bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q)
 
     if P_coh is None:
@@ -207,20 +215,22 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 1.2
+    k = 0.3
     # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
+        #print("P_coh")
         return P_coh
     else:
+        #print("P_app")
         return P_app
 
 # Algorithm: using approximate nearest neighbor search
-def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_rows, random_cols):
+def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_frames, random_rows, random_cols):
     '''
     l is for level l
     q is the point inside image B
     '''
-
+    # print("bestApproximateMatch")
     # num_samples = 100 # 2000
     # patch_size = 5
     # A_l = A[l]
@@ -244,7 +254,7 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_row
     
     # t.build(TREE)
 
-    feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
+    feature_q = getFeatureAtQ(B_l, (q[0], q[1], q[2]))
     
     num_candidates = 150
     
@@ -252,59 +262,104 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_row
     candidate_index = np.random.randint(0, num_candidates)
     neighbor_index = neighbor_indices[candidate_index]
 
+    first_pixel_frame = random_frames[neighbor_index]
     first_pixel_row = random_rows[neighbor_index]
     first_pixel_col = random_cols[neighbor_index]
 
+    center_pixel_frame = first_pixel_frame + patch_size // 2
     center_pixel_row = first_pixel_row + patch_size // 2
     center_pixel_col = first_pixel_col + patch_size // 2
 
-    return (center_pixel_row, center_pixel_col)
+    return (center_pixel_frame, center_pixel_row, center_pixel_col)
+
+
+def gaussian_kernel_3d(kernel_size, sigma = 1.0):
+    kernel_size = [int(k) for k in kernel_size]
+    kernel = np.zeros(kernel_size)
+    
+    # Ensure that the kernel dimensions are odd
+    for dim in kernel_size:
+        if dim % 2 == 0:
+            raise ValueError("Kernel size should be odd")
+
+    # Calculate the center position
+    center = [dim // 2 for dim in kernel_size]
+
+    # Calculate the Gaussian function
+    for x in range(kernel_size[0]):
+        for y in range(kernel_size[1]):
+            for z in range(kernel_size[2]):
+                diff = np.sqrt((x - center[0])**2 + (y - center[1])**2 + (z - center[2])**2)
+                kernel[x, y, z] = np.exp(-(diff**2) / (2 * sigma**2))
+
+    # Normalize the kernel
+    kernel /= np.sum(kernel)
+    
+    return kernel
+
+
+
 
 def getFeatureAtQ(A, q):
     '''
-    Gets the full features for the patch surrounding the pixel q
+    Gets the full features for the 3D patch surrounding the pixel q
     (q is in the center of the patch)
     '''
     if (q[0] < 0 or q[0] >= A.shape[0] or
-        q[1] < 0 or q[1] >= A.shape[1]):
+        q[1] < 0 or q[1] >= A.shape[1] or
+        q[2] < 0 or q[2] >= A.shape[2]):
         return None
 
     # TODO: use features of A_prime in the feature vector too
-    feature_length = A.shape[2]
-    patch_size = 7
+    feature_length = A.shape[3]
+    patch_size = 5
 
-    q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
+    q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2, q[2] - patch_size//2)
 
     # Get a patch
-    if q_top_left[0] < 0 or q_top_left[1] < 0 or q_top_left[0]+patch_size >= A.shape[0] or q_top_left[1]+patch_size >= A.shape[1]:
-        patch = np.zeros((patch_size, patch_size, feature_length))
+    if (q_top_left[0] < 0 or q_top_left[1] < 0 or q_top_left[2] < 0 or
+        q_top_left[0]+patch_size >= A.shape[0] or q_top_left[1]+patch_size >= A.shape[1] or q_top_left[2]+patch_size >= A.shape[2]):
+        patch = np.zeros((patch_size, patch_size, patch_size, feature_length))
         for i in range(patch_size):
             for j in range(patch_size):
-                A_i = 0
-                A_j = 0
-                if q_top_left[0] + i < 0:
+                for k in range(patch_size):
                     A_i = 0
-                elif q_top_left[0] + i >= A.shape[0]:
-                    A_i = A.shape[0] - 1
-                else:
-                    A_i = q_top_left[0] + i
-                if q_top_left[1] + j < 0:
                     A_j = 0
-                elif q_top_left[1] + j >= A.shape[1]:
-                    A_j = A.shape[1] - 1
-                else:
-                    A_j = q_top_left[1] + j
-                patch[i, j] = A[A_i, A_j]
+                    A_k = 0
+                    if q_top_left[0] + i < 0:
+                        A_i = 0
+                    elif q_top_left[0] + i >= A.shape[0]:
+                        A_i = A.shape[0] - 1
+                    else:
+                        A_i = q_top_left[0] + i
+                    if q_top_left[1] + j < 0:
+                        A_j = 0
+                    elif q_top_left[1] + j >= A.shape[1]:
+                        A_j = A.shape[1] - 1
+                    else:
+                        A_j = q_top_left[1] + j
+                    if q_top_left[2] + k < 0:
+                        A_k = 0
+                    elif q_top_left[2] + k >= A.shape[2]:
+                        A_k = A.shape[2] - 1
+                    else:
+                        A_k = q_top_left[2] + k
+                    patch[i, j, k] = A[A_i, A_j, A_k]
     else:
-        patch = A[q_top_left[0]:q_top_left[0]+patch_size, q_top_left[1]:q_top_left[1]+patch_size, :]
+        patch = A[q_top_left[0]:q_top_left[0]+patch_size, 
+                  q_top_left[1]:q_top_left[1]+patch_size, 
+                  q_top_left[2]:q_top_left[2]+patch_size, :]
 
     # Multiply by gaussian kernel to give more weight to center pixels of patch
-    kernel_x = cv2.getGaussianKernel(patch_size, sigma=0.3*((patch_size-1)*0.5 - 1) + 0.8)
-    kernel_2d = np.outer(kernel_x, kernel_x.T)
-    # Normalize the kernel to ensure its values sum up to 1
-    kernel_2d /= np.sum(kernel_2d)
+    #kernel_x = cv2.getGaussianKernel(patch_size, sigma=0.3*((patch_size-1)*0.5 - 1) + 0.8)
+    
+    # kernel_2d = np.outer(kernel_x, kernel_x.T)
+    # # Normalize the kernel to ensure its values sum up to 1
+    # kernel_2d /= np.sum(kernel_2d)
+    patch_size = (patch_size, patch_size, patch_size)
+    kernel_3d = gaussian_kernel_3d(patch_size)
 
-    patch = patch * np.stack([kernel_2d] * feature_length, axis=-1)
+    patch = patch * np.stack([kernel_3d] * feature_length, axis=-1)
 
     # Flatten features
     feature = np.reshape(patch, (-1))
@@ -320,46 +375,54 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 7
-    min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
-    max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
-    min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
-    max_col = clamp(q[1] + patch_size//2, 0, B_prime_l.shape[1] - 1)
+    patch_size = 5
+    min_frame = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
+    max_frame = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
+    min_row = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
+    max_row = clamp(q[1] + patch_size//2, 0, B_prime_l.shape[1] - 1)
+    min_col = clamp(q[2] - patch_size//2, 0, B_prime_l.shape[2] - 1)
+    max_col = clamp(q[2] + patch_size//2, 0, B_prime_l.shape[2] - 1)
 
     r_star = None
     smallest_dist = np.inf
     
-    for r_row in range(min_row, max_row + 1):
-        for r_col in range(min_col, max_col + 1):
-            if (r_row < q[0] or (r_row == q[0] and r_col < q[1])):
-                # This is a valid neighbor, do the calculation
-                s_r = s[l][r_row, r_col]
-                F_s_r = getFeatureAtQ(A_l, (s_r[0] + q[0] - r_row, s_r[1] + q[1] - r_col))
-                if F_s_r is None:
-                    continue
-                F_q = getFeatureAtQ(B_l, q)
-                distance = np.linalg.norm(F_s_r - F_q)
-                if distance < smallest_dist:
-                    r_star = (r_row, r_col)
-                    smallest_dist = distance
+    for r_frame in range(min_frame, max_frame + 1):
+        for r_row in range(min_row, max_row + 1):
+            for r_col in range(min_col, max_col + 1):
+                if (r_frame < q[0] or 
+                    (r_frame == q[0] and r_row < q[1]) or
+                    (r_frame == q[0] and r_row == q[1] and r_col < q[2])):
+                    # This is a valid neighbor, do the calculation
+                    s_r = s[l][r_frame, r_row, r_col]
+                    F_s_r = getFeatureAtQ(A_l, (s_r[0] + q[0] - r_frame, s_r[1] + q[1] - r_row, s_r[2] + q[2] - r_col))
+                    if F_s_r is None:
+                        continue
+                    F_q = getFeatureAtQ(B_l, q)
+                    distance = np.linalg.norm(F_s_r - F_q)
+                    if distance < smallest_dist:
+                        r_star = (r_frame, r_row, r_col)
+                        smallest_dist = distance
     if r_star == None:
         return None
     else:
-        s_r_star = s[l][r_star[0], r_star[1]]
-        p_coh_r = s_r_star[0] + q[0] - r_star[0]
-        p_coh_c = s_r_star[1] + q[1] - r_star[1]
+        s_r_star = s[l][r_star[0], r_star[1], r_star[2]]
+        p_coh_f = s_r_star[0] + q[0] - r_star[0]
+        p_coh_r = s_r_star[1] + q[1] - r_star[1]
+        p_coh_c = s_r_star[2] + q[2] - r_star[2]
+        
         # Check if candidate point is out of bounds
-        if (p_coh_r >= A_l.shape[0] or p_coh_r < 0 or
-            p_coh_c >= A_l.shape[1] or p_coh_c < 0):
+        if (p_coh_f >= A_l.shape[0] or p_coh_f < 0 or
+            p_coh_r >= A_l.shape[1] or p_coh_r < 0 or
+            p_coh_c >= A_l.shape[2] or p_coh_c < 0):
             return None
-        return (p_coh_r, p_coh_c)
+        return (p_coh_f, p_coh_r, p_coh_c)
 
 def computeFeatures(pyramid):
     '''
     Given a pyramid of images, returns a pyramid of images with
     R, G, B, and feature channels.
-    The input is a list of numpy arrays of shape (numRows x numColumns x 3).
-    Output is a list of numpy arrays of shape (numRows x numColumns x numFeatures)
+    The input is a numpy array of shape (numFrames x numRows x numColumns x 3).
+    Output is a numpy array of shape (numFrames x numRows x numColumns x numFeatures)
 
     R, G, and B could be included or not included in the features
     '''
@@ -367,18 +430,24 @@ def computeFeatures(pyramid):
     num_levels = len(pyramid)
     num_features = 13 # luminance + 12 steerable pyramid responses
 
-    feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], num_features)) for l in range(num_levels)]
+    feature_pyramid = [np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], pyramid[l].shape[2], num_features)) for l in range(num_levels)]
 
     # For each level of the pyramid...
     # Steerable pyramid library etc: https://github.com/LabForComputationalVision/pyPyrTools
     for l in range(num_levels):
-        feature_pyramid[l][:, :, 0] = computeLuminance(pyramid[l])
-        feature_pyramid[l][:, :, 1:] = computeSteerablePyramidResponse(pyramid[l])
+        feature_pyramid[l][:, :, :, 0] = computeLuminanceVideo(pyramid[l])
+        feature_pyramid[l][:, :, :, 1:] = computeSteerablePyramidResponseVideo(pyramid[l])
         
         # feature_pyramid[l][:,:,13] = np.zeros((pyramid[l].shape[0], pyramid[l].shape[1]))
         # feature_pyramid[l][:,:,14:] = np.zeros((pyramid[l].shape[0], pyramid[l].shape[1], 12))
 
     return feature_pyramid
+
+def computeLuminanceVideo(vid_BGR):
+    '''
+    Returns the Y channel from YIQ representation of the video
+    '''
+    return np.array([computeLuminance(frame) for frame in vid_BGR])
 
 def computeLuminance(im_BGR):
     '''
@@ -387,7 +456,17 @@ def computeLuminance(im_BGR):
     # TODO: use YIQ
     return cv2.cvtColor(im_BGR, cv2.COLOR_BGR2GRAY)
 
+def computeSteerablePyramidResponseVideo(vid):
+    '''
+    Im is frames x rows x cols
+    '''
+    response = np.zeros((vid.shape[0], vid.shape[1], vid.shape[2], 12))
+    for i in range(vid.shape[0]):
+        response[i] = computeSteerablePyramidResponse(vid[i])
+    return response
+
 def computeSteerablePyramidResponse(im):
+    
     # Use the grayscale image as input
     im = computeLuminance(im)
 
@@ -422,6 +501,15 @@ def edge_detection(image_path, low_threshold=100, high_threshold=200):
     edges = cv2.Canny(image, low_threshold, high_threshold)
     
     return edges
+
+def lumin_remap_vid(A, B):
+    '''
+    Implement luminance remapping for video
+    '''
+    for i in range(A.shape[0]):
+        A[i] = lumin_remap(A[i], B[i])
+    return A
+    
 
 def lumin_remap(A, B):
     """

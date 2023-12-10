@@ -130,9 +130,37 @@ def transfer(args):
 
 import matplotlib.pyplot as plt
 import cv2
+import numpy as np
 from analogy import createImageAnalogy
 import os
 from tqdm import tqdm
+
+
+def readIntoVolume(video_path):
+    # Initialize VideoCapture
+    cap = cv2.VideoCapture(video_path)
+
+    # List to hold all frames
+    frames = []
+
+    # Read each frame
+    i = 0
+    while True:
+        ret, frame = cap.read()
+        if not ret or i > 7:
+            break
+        frames.append(frame)
+        i += 1
+
+    # Convert the list of frames to a NumPy array
+    video_volume = np.array(frames)  # This will be of shape [num_frames, num_rows, num_cols, 3]
+
+    # Release the VideoCapture
+    cap.release()
+    return video_volume
+
+
+
 
 def extract_frames(video_path, frames_dir):
     """
@@ -143,6 +171,7 @@ def extract_frames(video_path, frames_dir):
         return 0
 
     cap = cv2.VideoCapture(video_path)
+    
     fps = cap.get(cv2.CAP_PROP_FPS)
     if not cap.isOpened():
         print("Error: Failed to open video file.")
@@ -200,13 +229,13 @@ def create_video(frames_dir, output_video_path, fps):
 
 if __name__ == '__main__':
     
-    A = plt.imread('../data/eld1.jpg')
-    A_prime = plt.imread('../data/eld2.jpg')
-    B = plt.imread('../data/shore.jpg')
-    B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
-    # plt.imshow(B_prime)
-    # plt.show()
-    plt.imsave("../results/output.jpg", B_prime)
+    # A = plt.imread('../data/eld1.jpg')
+    # A_prime = plt.imread('../data/eld2.jpg')
+    # B = plt.imread('../data/shore.jpg')
+    # B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
+    # # plt.imshow(B_prime)
+    # # plt.show()
+    # plt.imsave("../results/output.jpg", B_prime)
 
     #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
     video_path = '../data/captain.MOV'
@@ -216,32 +245,51 @@ if __name__ == '__main__':
     output_video_path = os.path.join(results_dir, 'output_video.mp4')
     
     # Read the reference images for analogy
-    A = plt.imread('../data/a1.jpg')
-    A_prime = plt.imread('../data/a2.jpg')
+    A = readIntoVolume('../data/w1.mp4')
+    A_prime = readIntoVolume('../data/w2.mp4')
+    B = readIntoVolume('../data/w3.mp4')
+    B_prime = createImageAnalogy(A, A_prime,B, show=True, seed_val=0)
+    
+    
+    output_path = '../data/outputvideo.mp4'
+    output = B_prime
+    frame_height, frame_width = output.shape[1], output.shape[2]
+    fps = 30  # Set this to the desired frame rate
 
+    # Initialize VideoWriter
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # 'mp4v' for .mp4 format
+    out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width, frame_height))
+
+    # Write each frame to the video
+    for frame in output:
+        out.write(frame)
+
+    # Release the VideoWriter
+    out.release()
 
     #Ensure directories exist
     #ChatGPT used for some debugging for the try-except exception handling
-    try:
-        os.makedirs(frames_dir, exist_ok=True)
-        os.makedirs(modified_frames_dir, exist_ok=True)
-        os.makedirs(results_dir, exist_ok=True)
-    except Exception as e:
-        print(f"Error creating directories: {e}")
-        exit(1)
-
-    # Extract frames from the video
-    count,fps = extract_frames(video_path, frames_dir)
-    if count == 0:
-        exit(1)
     
-    for frame_file in tqdm(sorted(os.listdir(frames_dir))):
-        frame_path = os.path.join(frames_dir, frame_file)
-        modified_frame_path = os.path.join(modified_frames_dir, frame_file)
-        
-        B = plt.imread(frame_path)
-        B_prime = createImageAnalogy(A, A_prime, B, show=False, seed_val=0)
-        plt.imsave(modified_frame_path, B_prime)
+    # try:
+    #     os.makedirs(frames_dir, exist_ok=True)
+    #     os.makedirs(modified_frames_dir, exist_ok=True)
+    #     os.makedirs(results_dir, exist_ok=True)
+    # except Exception as e:
+    #     print(f"Error creating directories: {e}")
+    #     exit(1)
 
-    # Create a video from the modified frames
-    create_video(modified_frames_dir, output_video_path, fps)  # Adjust FPS as needed
+    # # Extract frames from the video
+    # count,fps = extract_frames(video_path, frames_dir)
+    # if count == 0:
+    #     exit(1)
+    
+    # for frame_file in tqdm(sorted(os.listdir(frames_dir))):
+    #     frame_path = os.path.join(frames_dir, frame_file)
+    #     modified_frame_path = os.path.join(modified_frames_dir, frame_file)
+        
+    #     B = plt.imread(frame_path)
+    #     B_prime = createImageAnalogy(A, A_prime, B, show=False, seed_val=0)
+    #     plt.imsave(modified_frame_path, B_prime)
+
+    # # Create a video from the modified frames
+    # create_video(modified_frames_dir, output_video_path, fps)  # Adjust FPS as needed
