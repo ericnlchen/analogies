@@ -2,6 +2,8 @@
 CSCI 1290 final project to create image and video analogies
 
 ## Image Colorization
+* go to [Videos folder](https://github.com/ericnlchen/video-analogies/tree/main/Videos) and download `imageColorization_videoB.mp4` and `imageColorization_videoBprime.mp4` to get the video of B and B prime.
+  
 | unfiltered image A | filtered image A' |
 |:------:|:--------:|
 | <img width="279" alt="colorizationA" src="https://github.com/ericnlchen/video-analogies/assets/50728605/c2d6c8e4-a602-4b89-933a-45be56ac5762">| <img width="279" alt="colorizationAprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/ca572d74-a6b3-4b68-8dfd-a15dc7039ff3">  |
@@ -10,6 +12,8 @@ CSCI 1290 final project to create image and video analogies
 
 <br/><br/>
 ## Artistic Filters
+* go to [Videos folder](https://github.com/ericnlchen/video-analogies/tree/main/Videos) and download `oilpaintB.mp4` and `oilpaintBprime.mp4` to get the video of B and B prime.
+
 | unfiltered image A | filtered image A' |
 |:------:|:--------:|
 | <img width="279" alt="colorizationA" src="https://github.com/ericnlchen/video-analogies/assets/50728605/0ac2d3e3-5361-40f4-a79c-fe12d49c3831">| <img width="279" alt="colorizationAprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/d8ccc5fd-ba68-4923-8911-dd9aa0a2de7c">  |
