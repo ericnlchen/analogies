@@ -147,7 +147,7 @@ def readIntoVolume(video_path):
     i = 0
     while True:
         ret, frame = cap.read()
-        if not ret or i > 7:
+        if not ret or i > 5:
             break
         frames.append(frame)
         i += 1
@@ -245,9 +245,9 @@ if __name__ == '__main__':
     output_video_path = os.path.join(results_dir, 'output_video.mp4')
     
     # Read the reference images for analogy
-    A = readIntoVolume('../data/w1.mp4')
-    A_prime = readIntoVolume('../data/w2.mp4')
-    B = readIntoVolume('../data/w3.mp4')
+    A = readIntoVolume('../data/output2.mov')
+    A_prime = readIntoVolume('../data/captain2.mp4')
+    B = readIntoVolume('../data/output.mov')
     B_prime = createImageAnalogy(A, A_prime,B, show=True, seed_val=0)
     
     

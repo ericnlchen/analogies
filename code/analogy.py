@@ -111,7 +111,12 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
                     s[l][q[0], q[1], q[2]] = p
                     
         B_P = pyramid_B_prime[0]
-        B_P_lum = cv2.cvtColor(B_P, cv2.COLOR_BGR2GRAY)
+        if len(B_P.shape) == 2 or B_P.shape[2] == 1:
+            B_P_lum = B_P
+        else:
+            B_P_lum = cv2.cvtColor(B_P, cv2.COLOR_BGR2GRAY)
+
+        #B_P_lum = cv2.cvtColor(B_P, cv2.COLOR_BGR2GRAY)
         # plt.imshow(B_P_lum, cmap='gray')
         # plt.show()
         B_lum = cv2.cvtColor(B, cv2.COLOR_BGR2GRAY)
