@@ -78,7 +78,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         
-        num_samples = 100000 # 2000
+        num_samples = 40000 # 2000
         patch_size = 5
         A_l = features_A[l]
         #B_l = B[l]
