@@ -9,6 +9,13 @@ CSCI 1290 final project to create image and video analogies<br/>
 | **unfiltered image B** | **filtered image B'** |
 | <img width="279" alt="texture-by-numbersB" src="https://github.com/ericnlchen/video-analogies/assets/50728605/12cfacef-1529-4c40-a64b-8ab0ae02be48"> |<img width="279" alt="texture-by-numbersBprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/daf14c64-c1f2-4d2f-91d2-3cf6c23effca">|
 
+## Super-resolution
+| unfiltered image A | filtered image A' |
+|:------:|:--------:|
+| <img width="150" alt="Super-resolutionA" src="https://github.com/ericnlchen/video-analogies/assets/50728605/cdb63385-b420-4b7c-8143-5a0166f94247">| <img width="150" alt="Super-resolutionAprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/9fc924ec-49f4-41cd-a203-9b6bbac1ea87">  |
+| **unfiltered image B** | **filtered image B'** |
+| <img width="200" alt="Super-resolutionB" src="https://github.com/ericnlchen/video-analogies/assets/50728605/cfe78d25-80b7-405e-a6f8-b6b09161da63"> |<img width="200" alt="Super-resolutionBprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/3f2026f2-2293-4d96-93cc-67c17d0e7592">|
+
 <br/><br/>
 ## Image Colorization
 * go to [Videos folder](https://github.com/ericnlchen/video-analogies/tree/main/Videos) and download `imageColorization_videoB.mp4` and `imageColorization_videoBprime.mp4` to get the video of B and B prime.
