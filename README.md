@@ -35,3 +35,22 @@ CSCI 1290 final project to create image and video analogies<br/>
 | <img width="279" alt="artistic-filtersA" src="https://github.com/ericnlchen/video-analogies/assets/50728605/0ac2d3e3-5361-40f4-a79c-fe12d49c3831">| <img width="279" alt="artistic-filtersAprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/d8ccc5fd-ba68-4923-8911-dd9aa0a2de7c">  |
 | **unfiltered image B** | **filtered image B'** |
 | <img width="424" alt="artistic-filtersB" src="https://github.com/ericnlchen/video-analogies/assets/50728605/0dbb6437-74ea-4399-a647-7a29be3e8576"> |<img width="424" alt="artistic-filtersBprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/45a4331b-5152-4bc3-aa3a-bea5b25b8e26">|
+
+<br/><br/>
+## Artistic Filters
+| unfiltered image A | filtered image A' |
+|:------:|:--------:|
+| <img width="279" alt="artistic-filtersA" src="https://github.com/ericnlchen/video-analogies/assets/50728605/54d061dd-ac35-497c-a088-918410c7a8c9">| <img width="279" alt="artistic-filtersAprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/74bce368-6082-4807-9896-f644e3744545">  |
+| **unfiltered image B** | **filtered image B'** |
+| <img width="424" alt="artistic-filtersB" src="https://github.com/ericnlchen/video-analogies/assets/50728605/d7f0d770-36d4-4e13-b3e2-52dcac3022db"> |<img width="424" alt="artistic-filtersBprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/39fe59b7-b5a8-47a1-a337-ae52ff5b146f">|
+
+
+<br/><br/>
+## Artistic Filters
+* go to [Videos folder](https://github.com/ericnlchen/video-analogies/tree/main/Videos) and download `winnie the pooh output final result.mp4` and `winnie the pooh_trimmed2.mp4` to get the video of B and B prime.
+
+| unfiltered image A | filtered image A' |
+|:------:|:--------:|
+| <img width="279" alt="artistic-filtersA" src="https://github.com/ericnlchen/video-analogies/assets/50728605/f1459906-623e-4c2d-8d3c-f1fce095f484">| <img width="279" alt="artistic-filtersAprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/156bd38b-635b-46a3-b069-0a97dfd7d9ff">  |
+| **unfiltered image B** | **filtered image B'** |
+| <img width="424" alt="artistic-filtersB" src="https://github.com/ericnlchen/video-analogies/assets/50728605/186b92be-7dff-4dc6-b541-aa653df141b5"> |<img width="424" alt="artistic-filtersBprime" src="https://github.com/ericnlchen/video-analogies/assets/50728605/36f6db92-b335-48a5-baa5-21b74164c077">|
