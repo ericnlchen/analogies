@@ -429,20 +429,6 @@ def computeSteerablePyramidResponse(im):
     result = np.stack(responses, axis=-1)
     return result
 
-# won't be using this probably -> need to use steerable pyramids
-def edge_detection(image_path, low_threshold=100, high_threshold=200):
-    # Read the image in grayscale
-    image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    
-    # Check if image is loaded
-    if image is None:
-        raise ValueError("Image not found or path is incorrect")
-
-    # Apply Canny edge detection
-    edges = cv2.Canny(image, low_threshold, high_threshold)
-    
-    return edges
-
 def lumin_remap(A, B):
     """
     Implement luminance remapping 
