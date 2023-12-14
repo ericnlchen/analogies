@@ -97,18 +97,19 @@ def create_video_from_selected_frames(frames_dir, modified_frames_dir, output_vi
 
 if __name__ == '__main__':
     
-    # A = plt.imread('./data/bu1.jpeg')
-    # A_prime = plt.imread('./data/bu2.jpeg')
-    # B = plt.imread('./data/butterfly.jpg')
-    # B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
+    A = plt.imread('../data/eld1.jpg')
+    A_prime = plt.imread('../data/eld2.jpg')
+    B = plt.imread('../data/shore.jpg')
+    B_prime = createImageAnalogy(A, A_prime, B, show=True, seed_val=0)
     # plt.imshow(B_prime)
     # plt.show()
-    # plt.imsave("../results/output.jpg", B_prime)
+    plt.imsave("../results/output.jpg", B_prime)
 
-    video_path = './data/winnie the pooh_trimmed2.mp4'
-    frames_dir = './data/frames'
-    modified_frames_dir = './data/modified_frames'
-    results_dir = './results'  # Directory for results
+    #current sample video reference: https://www.istockphoto.com/video/flock-of-sheep-looking-for-food-on-the-dried-lake-bed-gm1426683353-470839023
+    video_path = '../data/captain.MOV'
+    frames_dir = '../data/frames'
+    modified_frames_dir = '../data/modified_frames'
+    results_dir = '../results'  # Directory for results
     output_video_path = os.path.join(results_dir, 'output_video.mp4')
     
     # Read the reference images for analogy

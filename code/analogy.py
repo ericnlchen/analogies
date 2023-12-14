@@ -122,8 +122,87 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
 
                 # Keep track of the mapping between p and q
                 s[l][q[0], q[1]] = p
+        B_P = pyramid_B_prime[0]
+        B_P_lum = cv2.cvtColor(B_P, cv2.COLOR_BGR2GRAY)
+        # plt.imshow(B_P_lum, cmap='gray')
+        # plt.show()
+        B_lum = cv2.cvtColor(B, cv2.COLOR_BGR2GRAY)
+        B_r = B[:, :, 0]
+        B_g = B[:, :, 1]
+        B_b = B[:, :, 2]
+        epsilon = 1e-5
+        B_chrom_r = B_r / (B_lum+epsilon)
+        B_chrom_g = B_g / (B_lum+epsilon)
+        B_chrom_b = B_b / (B_lum+epsilon)
+        # print("start B_P_lum: ", np.min(B_P_lum))
+        # print("B_P", np.max(B_P_lum))
+        # print("B_chrom_r", np.min(B_chrom_r))
+        # print("B_chrom_r", np.max(B_chrom_r))
+        
+        # B_chrom = np.stack([B_chrom_r, B_chrom_g, B_chrom_b], axis=-1)
+        # new_B = np.stack([B_P_lum]*3, axis=-1) * B_chrom
+        # # new_B = new_B/255.0
+        # # new_B = new_B / (1 + new_B)
+        # new_B = np.clip(new_B, 0, 255)/255.0
+        
+        def chrominance_scaling(lum, chrom, scale=0.38):
+        # Scale factor should be in the range [0, 1], where 0 is no scaling and 1 is full scaling
+            scaled_chrom = 1 + (chrom - 1) * (np.clip(lum / (scale * 255), 0, 1))
+            return scaled_chrom
+        
+        lum_threshold = 0.25 * 255  # Adjust this threshold as needed
 
-    return pyramid_B_prime[0]
+        # Blend chrominance in low-luminance areas with neutral chrominance
+        
+        # B_chrom_r = np.where(B_lum < lum_threshold, B_chrom_r/(1/(B_lum*13)+1), B_chrom_r)
+        # B_chrom_g = np.where(B_lum < lum_threshold, B_chrom_g/(1/(B_lum*13)+1), B_chrom_g)
+        # B_chrom_b = np.where(B_lum < lum_threshold, B_chrom_b/(1/(B_lum*13)+1), B_chrom_b)
+        
+        B_chrom_r = chrominance_scaling(B_lum, B_chrom_r)
+        B_chrom_g = chrominance_scaling(B_lum, B_chrom_g)
+        B_chrom_b = chrominance_scaling(B_lum, B_chrom_b)
+        
+        
+        
+        
+        
+        
+        def sigmoid_scaling(lum, chrom, scale=5, offset=0.5):
+        # Sigmoid function for scaling
+        # 'scale' adjusts the steepness of the sigmoid curve
+        # 'offset' shifts the midpoint of the sigmoid curve
+            sigmoid_factor = 1 / (1 + np.exp(-scale * (lum / 255 - offset)))
+            return 1 + (chrom - 1) * sigmoid_factor
+
+        # Apply sigmoid scaling to chrominance channels
+        # B_chrom_r = sigmoid_scaling(B_lum, B_chrom_r)
+        # B_chrom_g = sigmoid_scaling(B_lum, B_chrom_g)
+        # B_chrom_b = sigmoid_scaling(B_lum, B_chrom_b)
+
+        
+        
+        
+        
+        
+        
+        # lum = np.where(B_lum < lum_threshold, B_lum, B_P_lum)
+
+        B_chrom = np.stack([B_chrom_r, B_chrom_g, B_chrom_b], axis=-1)
+        new_B = np.stack([B_P_lum]*3, axis=-1) * B_chrom
+        # plt.imshow(B)
+        # plt.show()
+        new_B = np.clip(new_B, 0, 255) / 255.0
+        
+        
+        
+        # plt.imshow(cv2.cvtColor(new_B.astype(np.float32),cv2.COLOR_BGR2GRAY), cmap='gray')
+        # #plt.imshow(new_B)
+        # plt.show()
+        print("B_newmin", np.min(new_B))
+        print("B_newmax", np.max(new_B))
+
+    return new_B
+    #return pyramid_B_prime[0]
 
 def createGaussianPyramid(img, level):
     gaus_pyramid = [img]
@@ -148,8 +227,8 @@ def bestMatch(A, A_prime, B, B_prime, s, l, q, t, patch_size, random_rows, rando
     d_coh = np.linalg.norm(getFeatureAtQ(A_l, P_coh) - getFeatureAtQ(B_l, q))
 
     # NOTE: k represents an estimate of the scale of "textons" at level l
-    k = 0.1
-    # TODO:add the number of levels to this weighting function
+    k = 1.2
+    # TODO: add the number of levels to this weighting function
     if d_coh <= d_app * (1 + np.power(2, l - 0) * k):
         return P_coh
     else:
@@ -187,7 +266,11 @@ def bestApproximateMatch(A, A_prime, B, B_prime, l, q, t, patch_size, random_row
 
     feature_q = getFeatureAtQ(B_l, (q[0], q[1]))
     
-    neighbor_index = t.get_nns_by_vector(feature_q, 1)[0]
+    num_candidates = 150
+    
+    neighbor_indices = t.get_nns_by_vector(feature_q, num_candidates)
+    candidate_index = np.random.randint(0, num_candidates)
+    neighbor_index = neighbor_indices[candidate_index]
 
     first_pixel_row = random_rows[neighbor_index]
     first_pixel_col = random_cols[neighbor_index]
@@ -208,7 +291,7 @@ def getFeatureAtQ(A, q):
 
     # TODO: use features of A_prime in the feature vector too
     feature_length = A.shape[2]
-    patch_size = 5
+    patch_size = 7
 
     q_top_left = (q[0] - patch_size//2, q[1] - patch_size//2)
 
@@ -257,7 +340,7 @@ def bestCoherenceMatch(A, A_prime, B, B_prime, s, l, q):
     B_l = B[l]
     A_l = A[l]
 
-    patch_size = 5
+    patch_size = 7
     min_row = clamp(q[0] - patch_size//2, 0, B_prime_l.shape[0] - 1)
     max_row = clamp(q[0] + patch_size//2, 0, B_prime_l.shape[0] - 1)
     min_col = clamp(q[1] - patch_size//2, 0, B_prime_l.shape[1] - 1)
