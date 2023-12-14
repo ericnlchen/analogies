@@ -7,7 +7,7 @@ import colorsys
 from skimage import color
 from skimage import img_as_ubyte
 from tqdm import tqdm
-from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
+# from sklearn.decomposition import PCA # https://scikit-learn.org/stable/modules/generated/sklearn.decomposition.PCA.html
 
 
 def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
@@ -20,6 +20,26 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
 
     # Constants
     num_levels = 1 # TODO: make this higher
+    
+    def check_and_convert_image(img):
+        if len(img.shape) == 3:
+            if img.shape[2] == 4:
+                # Convert RGBA to RGB
+                img = cv2.cvtColor(img, cv2.COLOR_RGBA2RGB)
+            elif img.shape[2] != 3:
+                # Handle other unexpected channel sizes
+                raise ValueError(f"Unexpected number of channels: {img.shape[2]}")
+        elif len(img.shape) == 2:
+            # Convert grayscale to RGB
+            img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+        else:
+            raise ValueError(f"Unexpected image shape: {img.shape}")
+        return img
+
+
+    A = check_and_convert_image(A)
+    A_prime = check_and_convert_image(A_prime)
+    B = check_and_convert_image(B)
 
     print("Initializing data structures...")
     A = lumin_remap(A, B)
@@ -59,7 +79,7 @@ def createImageAnalogy(A, A_prime, B, show=False, seed_val=None):
         
         
         num_samples = 40000 # 2000
-        patch_size = 7
+        patch_size = 5
         A_l = features_A[l]
         #B_l = B[l]
 
