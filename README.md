@@ -1,5 +1,7 @@
-# analogies
-CSCI 1290 final project to create image and video analogies<br/>
+# Analogies
+CSCI 1290 final project to create image analogies and video analogies<br/>
+We implement the image analogies from the [Image Analogies paper](https://mrl.cs.nyu.edu/publications/image-analogies/analogies-72dpi.pdf) and try to create videos using the image analogies as our base theory.<br/>
+Some of our results are presented below.
 
 <br/><br/>
 ## Texture-by-numbers
